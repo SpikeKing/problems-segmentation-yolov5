@@ -55,7 +55,8 @@ class DatasetGenerator(object):
         x, y, w, h = x*iw, y*ih, w*iw, h*ih
         x_min, x_max = x - w // 2, x + w // 2
         y_min, y_max = y - h // 2, y + h // 2
-        draw_box(img_bgr, [x_min, y_min, x_max, y_max])
+        img_out = draw_box(img_bgr, [x_min, y_min, x_max, y_max], is_show=False)
+        return img_out
 
     @staticmethod
     def get_boxes_from_items(label_str):
@@ -96,9 +97,12 @@ class DatasetGenerator(object):
 
     @staticmethod
     def generate_item(idx, url, p_box_list, out_img_path, out_txt_path):
+        if not p_box_list:
+            return
         is_ok, img_bgr = download_url_img(url)
-
         cv2.imwrite(out_img_path, img_bgr)
+
+        create_file(out_txt_path)
 
         ih, iw, _ = img_bgr.shape
         for p_box in p_box_list:
@@ -174,28 +178,53 @@ class DatasetGenerator(object):
             else:
                 out_img_path = os.path.join(out_images_val_dir, file_name+".jpg")
                 out_txt_path = os.path.join(out_labels_val_dir, file_name+".txt")
-            create_file(out_txt_path)
 
             url, p_box_list = img_dict[img_name]
 
             # 测试
-            # DataPreprocess.generate_item(idx, url, p_box_list, out_img_path, out_txt_path)
-            # if idx == 10:
-            #     print('[Info] idx: {}'.format(idx))
-            #     break
+            DatasetGenerator.generate_item(idx, url, p_box_list, out_img_path, out_txt_path)
+            if idx == 20:
+                print('[Info] idx: {}'.format(idx))
+                break
 
             # 多进程
-            pool.apply_async(DatasetGenerator.generate_item, (idx, url, p_box_list, out_img_path, out_txt_path))
+            # pool.apply_async(DatasetGenerator.generate_item, (idx, url, p_box_list, out_img_path, out_txt_path))
 
         pool.close()
         pool.join()
         print('[Info] 处理完成: {}'.format(out_dataset_dir))
 
+    def check_dataset(self):
+        dataset_dir = os.path.join(DATA_DIR, 'ps_datasets')
+        images_dir = os.path.join(dataset_dir, 'images', 'train')
+        labels_dir = os.path.join(dataset_dir, 'labels', 'train')
+        out_dir = os.path.join(DATA_DIR, 'ps_datasets_checked')
+        mkdir_if_not_exist(out_dir)
+
+        paths_list, names_list = traverse_dir_files(images_dir)
+        paths_list, names_list = shuffle_two_list(paths_list, names_list )
+        paths_list, names_list = paths_list[:20], names_list[:20]
+        print('[Info] 检查样本数: {}'.format(len(paths_list)))
+
+        for path, name in zip(paths_list, names_list):
+            label_name = name.split('.')[0] + ".txt"
+            img_bgr = cv2.imread(path)
+            label_path = os.path.join(labels_dir, label_name)
+            data_lines = read_file(label_path)
+            for idx, data_line in enumerate(data_lines):
+                img_bgr = self.check_darknet_data(img_bgr, data_line)
+
+            out_path = os.path.join(out_dir, name)
+            cv2.imwrite(out_path, img_bgr)
+
+        print('[Info] 检查完成! {}'.format(out_dir))
+
 
 def main():
     print('[Info] 处理开始')
     dg = DatasetGenerator()
-    dg.generate()
+    # dg.generate()
+    dg.check_dataset()
 
 
 if __name__ == "__main__":
