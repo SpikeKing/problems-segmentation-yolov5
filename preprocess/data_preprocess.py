@@ -16,7 +16,7 @@ if p not in sys.path:
 from myutils.project_utils import *
 from myutils.cv_utils import *
 from root_dir import DATA_DIR
-from x_utils.vpf_utils import get_trt_rotation_vpf_service
+from x_utils.vpf_utils import get_uc_rotation_vpf_service
 from x_utils.oss_utils import save_img_2_oss
 
 
@@ -34,7 +34,7 @@ class DataPreprocess(object):
         url = url.split('?')[0]
         img_name = url.split('/')[-1]
         # print('[Info] url: {}'.format(url))
-        data_dict = get_trt_rotation_vpf_service(url)
+        data_dict = get_uc_rotation_vpf_service(url)
         print('[Info] data_dict: {}'.format(data_dict))
         angle = data_dict['data']['data']['angle']
         # print('[Info] angle: {}'.format(angle))
