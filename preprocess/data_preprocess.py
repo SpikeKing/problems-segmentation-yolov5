@@ -42,6 +42,7 @@ class DataPreprocess(object):
         out_img = rotate_img_for_4angle(img_bgr, angle)  # 旋转角度
         # show_img_bgr(out_img)
         url = save_img_2_oss(out_img, img_name, "zhengsheng.wcl/problems_segmentation/datasets/prelabeled-20201223")
+        print('[Info] url: {}'.format(url))
         write_line(out_file, url)
         print('[Info] idx: {}'.format(idx))
 
@@ -61,13 +62,13 @@ class DataPreprocess(object):
             data_lines += sub_lines
         print('[Info] 文本行数: {}'.format(len(data_lines)))
 
-        # pool = Pool(processes=80)
+        pool = Pool(processes=80)
         for idx, data_line in enumerate(data_lines):
-            DataPreprocess.process_line(idx, data_line, out_file)
-            # pool.apply_async(DataPreprocess.process_line, (idx, data_line, out_file))
+            # DataPreprocess.process_line(idx, data_line, out_file)
+            pool.apply_async(DataPreprocess.process_line, (idx, data_line, out_file))
 
-        # pool.close()
-        # pool.join()
+        pool.close()
+        pool.join()
         print('[Info] 处理完成: {}'.format(out_file))
 
 
