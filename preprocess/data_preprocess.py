@@ -35,7 +35,7 @@ class DataPreprocess(object):
         img_name = url.split('/')[-1]
         # print('[Info] url: {}'.format(url))
         data_dict = get_uc_rotation_vpf_service(url)
-        print('[Info] data_dict: {}'.format(data_dict))
+        # print('[Info] data_dict: {}'.format(data_dict))
         angle = data_dict['data']['angle']
         # print('[Info] angle: {}'.format(angle))
         is_ok, img_bgr = download_url_img(url)
