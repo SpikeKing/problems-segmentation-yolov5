@@ -62,6 +62,9 @@ class DataPreprocess(object):
             data_lines += sub_lines
         print('[Info] 文本行数: {}'.format(len(data_lines)))
 
+        random.seed(47)
+        random.shuffle(data_lines)
+
         pool = Pool(processes=80)
         for idx, data_line in enumerate(data_lines):
             # DataPreprocess.process_line(idx, data_line, out_file)
