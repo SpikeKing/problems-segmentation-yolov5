@@ -94,7 +94,6 @@ class DatasetGenerator(object):
         # print('[Info] p_box_list: {}'.format(p_box_list))
         return img_name, url, p_box_list
 
-
     @staticmethod
     def generate_item(idx, url, p_box_list, out_img_path, out_txt_path):
         if not p_box_list:
@@ -219,12 +218,46 @@ class DatasetGenerator(object):
 
         print('[Info] 检查完成! {}'.format(out_dir))
 
+    @staticmethod
+    def split_prelabeled_data():
+        data_file = os.path.join(DATA_DIR, 'prelabeled_2020_12_23.txt')
+        data_lines = read_file(data_file)
+        print('[Info] 文件数: {}'.format(len(data_lines)))
+
+        img_name_dict = dict()
+        for data_line in data_lines:
+            img_name = data_line.split("/")[-1]
+            img_name_dict[img_name] = data_line
+
+        data_lines = list(img_name_dict.values())
+        print('[Info] 清洗文件数: {}'.format(len(data_lines)))
+
+        out_dir = os.path.join(DATA_DIR, 'prelabeled_2020_12_23_split')
+        mkdir_if_not_exist(out_dir)
+
+        num = 2000
+        out_file_format = os.path.join(out_dir, "cases_{}_{}.txt")
+        s_num, e_num = 0, num
+        for i, data_line in enumerate(data_lines):
+            if s_num <= i < e_num:
+                out_file = out_file_format.format(s_num+1, e_num)
+            else:
+                s_num = e_num
+                e_num += num
+                e_num = e_num if e_num < len(data_lines) else len(data_lines)
+                out_file = out_file_format.format(s_num+1, e_num)
+            write_line(out_file, data_line)
+
+        print('[Info] 处理完成!')
+
 
 def main():
     print('[Info] 处理开始')
     dg = DatasetGenerator()
-    # dg.generate()
-    dg.check_dataset()
+
+    # dg.generate()  # 生成数据集
+    # dg.check_dataset()  # 检查数据集
+    dg.split_prelabeled_data()  # 切分标注数据
 
 
 if __name__ == "__main__":

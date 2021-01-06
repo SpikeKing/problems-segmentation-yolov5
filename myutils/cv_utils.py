@@ -6,7 +6,9 @@ Created by C. L. Wang on 2020/3/13
 """
 
 import cv2
+import copy
 import numpy as np
+
 
 def draw_line_len(img_bgr, start_p, v_length, v_arrow, is_new=True, is_show=False, save_name=None):
     """
@@ -693,6 +695,59 @@ def rotate_img_for_4angle(img_bgr, angle):
     else:
         img_rotated = img_bgr
     return img_rotated
+
+
+def rec2box(rec):
+    """
+    多边形(多点)转换为xyxy
+    """
+    x_list, y_list = [], []
+    for pnt in rec:
+        x_list.append(pnt[0])
+        y_list.append(pnt[1])
+    x_min, x_max = min(x_list), max(x_list)
+    y_min, y_max = min(y_list), max(y_list)
+    box = [x_min, y_min, x_max, y_max]
+    return box
+
+
+def draw_box_list(img_bgr, box_list, is_arrow=False, is_show=False):
+    """
+    绘制矩形列表
+    """
+    n_box = len(box_list)
+    color_list = generate_colors(n_box)  # 随机生成颜色
+    ori_img = copy.copy(img_bgr)
+    img_copy = copy.copy(img_bgr)
+
+    # 绘制颜色块
+    for idx, (box, color) in enumerate(zip(box_list, color_list)):
+        # rec_arr = np.array(box)
+        # ori_img = cv2.fillPoly(ori_img, [rec_arr], color_list[idx])
+        x_min, y_min, x_max, y_max = box
+        ori_img = cv2.rectangle(ori_img, pt1=(x_min, y_min), pt2=(x_max, y_max), color=(color), thickness=-1)
+
+    ori_img = cv2.addWeighted(ori_img, 0.5, img_copy, 0.5, 0)
+    ori_img = np.clip(ori_img, 0, 255)
+
+    # 绘制方向和序号
+    pre_point, next_point = None, None
+    pre_color = None
+    for idx, box in enumerate(box_list):
+        x_min, y_min, x_max, y_max = box
+        point = ((x_min + x_max) // 2, (y_min + y_max) // 2)
+        if is_arrow:
+            pre_point = point
+            if pre_point and next_point:  # 绘制箭头
+                cv2.arrowedLine(ori_img, next_point, pre_point, pre_color, thickness=5,
+                                line_type=cv2.LINE_4, shift=0, tipLength=0.05)
+            next_point = point
+            pre_color = color_list[idx]
+        draw_text(ori_img, str(idx), point)  # 绘制序号
+
+    if is_show:
+        show_img_bgr(ori_img)
+    return ori_img
 
 
 def main():
