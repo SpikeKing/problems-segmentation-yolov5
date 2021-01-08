@@ -834,3 +834,19 @@ def random_prob(prob):
     """
     x = random.choices([True, False], [prob, 1-prob])
     return x[0]
+
+
+def filter_list_by_idxes(data_list, idx_list):
+    """
+    通过索引过滤list, 兼容1~2层list
+    """
+    res_list = []
+    for idx in idx_list:
+        if not isinstance(idx, list):
+            res_list.append(data_list[idx])
+        else:
+            sub_list = []
+            for i in idx:
+                sub_list.append(data_list[i])
+            res_list.append(sub_list)
+    return res_list
