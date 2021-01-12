@@ -50,7 +50,8 @@ class DatasetGeneratorV2(object):
 
     @staticmethod
     def generate_file(file_path, file_idx):
-        print('[Info] file_path: {}, file_idx: {}'.format(file_path, str(file_idx).zfill(4)))
+        file_idx = str(file_idx).zfill(4)
+        print('[Info] file_path: {}, file_idx: {}'.format(file_path, file_idx))
 
         url_format = "http://sm-transfer.oss-cn-hangzhou.aliyuncs.com/zhengsheng.wcl/problems_segmentation/" \
                           "datasets/prelabeled-20201224/{}.jpg"
@@ -131,7 +132,7 @@ class DatasetGeneratorV2(object):
             lbl_path = os.path.join(out_labels_train_dir, '{}.txt'.format(out_name))
             write_list_to_file(lbl_path, bbox_yolo_list)
             print('[Info] lbl_path: {}'.format(lbl_path))
-            
+
             print('[Info] ' + "-" * 100)
             if idx == 20:
                 break
