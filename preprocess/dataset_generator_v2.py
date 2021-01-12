@@ -155,6 +155,7 @@ def process():
     pool = Pool(processes=10)
     for path, name in zip(paths_list, names_list):
         # DatasetGeneratorV2.generate_file(path)
+        print('[Info] path: {}'.format(path))
         pool.apply_async(DatasetGeneratorV2.generate_file, path)
 
     pool.close()
