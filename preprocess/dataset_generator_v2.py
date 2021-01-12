@@ -160,10 +160,10 @@ class DatasetGeneratorV2(object):
 
 
 def process():
-    dir_path = os.path.join(DATA_DIR, 'ps_datasets_v2_raw_mini')
+    dir_path = os.path.join(DATA_DIR, 'ps_datasets_v2_raw')
     paths_list, names_list = traverse_dir_files(dir_path)
 
-    pool = Pool(processes=10)
+    pool = Pool(processes=20)
 
     for file_idx, (path, name) in enumerate(zip(paths_list, names_list)):
         # DatasetGeneratorV2.generate_file(path)
