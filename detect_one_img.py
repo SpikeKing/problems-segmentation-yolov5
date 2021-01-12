@@ -48,7 +48,7 @@ class ImgDetector(object):
             size_list.append(get_box_size(box))
             idx_list.append(idx)
 
-        size_list, idx_list, sorted_boxes = \
+        size_list, sorted_idxes, sorted_boxes = \
             sort_three_list(size_list, idx_list, boxes, reverse=True)
 
         n_box = len(sorted_boxes)  # box的数量
@@ -57,17 +57,21 @@ class ImgDetector(object):
         for i in range(n_box):
             if not flag_list[i]:
                 continue
+            x_boxes = []
             for j in range(i+1, n_box):
                 box1 = sorted_boxes[i]
                 box2 = sorted_boxes[j]
                 r_iou = min_iou(box1, box2)
-                if r_iou > 0.8:
+                if r_iou > 0.5:
                     flag_list[j] = False
+                    x_boxes.append(box2)
+            sorted_idxes[i] = merge_boxes(x_boxes+[sorted_boxes[i]])
 
         new_boxes = []
         for i in range(n_box):
-            if flag_list[idx_list.index(i)]:
-                new_boxes.append(boxes[i])
+            if flag_list[i]:
+                new_boxes.append(sorted_idxes[i])
+
         return new_boxes
 
     def load_model(self):
@@ -214,7 +218,7 @@ class ImgDetector(object):
 
         return new_words_info, box_list, word_list, idx_list, data_dict
 
-    def analyze_layout(self, l2r_boxes, h, w, is_ud=True):
+    def analyze_layout(self, l2r_boxes, h, w, is_ud=True, img_bgr=None):
         """
         分析版面，从左到右的box列
         """
@@ -234,19 +238,16 @@ class ImgDetector(object):
             x_min, x_max = min(x_list), max(x_list)
             y_min, y_max = min(y_list), max(y_list)
 
-            if pre_x_min == -1:
-                pre_x_min = x_min
-            else:
-                if x_max > pre_x_min:  # 避免交叉
-                    x_max = pre_x_min
             if not is_ud:
                 col_box = [x_min, y_min, x_max, y_max]
             else:
                 col_box = [x_min, 0, x_max, h]
+            draw_box(img_bgr, col_box, is_show=True)
             print('[Info] col_box: {}'.format(col_box))
             col_box_list.append(col_box)
 
         col_box_list.reverse()
+        col_box_list = self.filer_boxes_by_size(col_box_list)
         return col_box_list
 
     def filer_boxes_by_col(self, col_boxes, sub_boxes):
@@ -294,7 +295,8 @@ class ImgDetector(object):
                                    "sentence2": "{}".format(str2)})
         next_flags = [False] * n_box
         if query_list:
-            query_list_str = json.dumps(query_list)
+            print('[Info] query_list: {}'.format(query_list))
+            query_list_str = json.dumps(query_list).replace('\n', '').replace("'", '"')
             print(query_list_str)
             service_res = get_next_sentences_vpf_service(query_list_str)
             print('[Info] service_res: {}'.format(service_res))
@@ -345,7 +347,7 @@ class ImgDetector(object):
             words_data['blockIdx'] = -1
             words_data['lineIdx'] = -1
 
-        # draw_box_list(img_bgr, col_boxes, is_show=True)  # 测试版面切分效果
+        img_bgr = draw_box_list(img_bgr, col_boxes, is_show=True, is_text=False)  # 测试版面切分效果
         # draw_box_list(img_bgr, problem_boxes, is_show=True)  # 测试题目切分效果
 
         # ---------- 切分栏 ----------#
@@ -387,7 +389,6 @@ class ImgDetector(object):
                     c_tag = "c_{}".format(col_idx)
                     col_prb_box_dict[c_tag].append(prb_box)
 
-        res_blocks_list = []  # 每栏的block数
         idx_list, num_list = [], []
         for c_tag in col_prb_box_dict.keys():
             idx = int(c_tag.split('_')[-1])
@@ -512,25 +513,25 @@ class ImgDetector(object):
         all_idx_list = []
         for col_idx, col_list in enumerate(rank_idx_num_list):
             print('[Info] col_idx: {}, col_list: {} - {}'.format(col_idx, len(col_list), col_list))
-            # import itertools
-            # merged = list(itertools.chain(*col_list))
-            # merged = list(itertools.chain(*merged))
-            # col_boxes = [all_box_list[i] for i in merged]
-            # col_one_box = merge_boxes(col_boxes)
-            # draw_box(img_bgr, col_one_box, is_new=False, is_show=False)
+            import itertools
+            merged = list(itertools.chain(*col_list))
+            merged = list(itertools.chain(*merged))
+            col_boxes = [all_box_list[i] for i in merged]
+            col_one_box = merge_boxes(col_boxes)
+            draw_box(img_bgr, col_one_box, is_new=False, is_show=False)
             for prb_idx, prb_list in enumerate(col_list):
                 print('\t[Info] prb_idx: {}, prb_list: {} - {}'.format(prb_idx, len(prb_list), prb_list))
-                # import itertools
-                # merged = list(itertools.chain(*prb_list))
-                # prb_boxes = [all_box_list[i] for i in merged]
-                # prb_one_box = merge_boxes(prb_boxes)
-                # draw_box(img_bgr, prb_one_box, color=(0, 255, 0), is_new=False, is_show=False)
+                import itertools
+                merged = list(itertools.chain(*prb_list))
+                prb_boxes = [all_box_list[i] for i in merged]
+                prb_one_box = merge_boxes(prb_boxes)
+                draw_box(img_bgr, prb_one_box, color=(0, 255, 0), is_new=False, is_show=False)
                 for row_idx, row_list in enumerate(prb_list):
                     print('\t\t[Info] row_idx: {}, row_list: {} - {}'.format(row_idx, len(row_list), row_list))
                     all_idx_list += row_list
-                    # row_boxes = [all_box_list[i] for i in row_list]
-                    # row_one_box = merge_boxes(row_boxes)
-                    # draw_box(img_bgr, row_one_box, color=(255, 0, 0), is_new=False, is_show=False)
+                    row_boxes = [all_box_list[i] for i in row_list]
+                    row_one_box = merge_boxes(row_boxes)
+                    draw_box(img_bgr, row_one_box, color=(255, 0, 0), is_new=False, is_show=False)
 
         show_img_bgr(img_bgr, save_name="test_nested.jpg")
         print('[Info] all_idx_list: {}'.format(all_idx_list))
@@ -552,7 +553,95 @@ class ImgDetector(object):
             draw_text(img_bgr, word_tag_str, org=get_box_center(word_box), color=(0, 0, 255))
 
         show_img_bgr(img_bgr, save_name="test_info.jpg")
-        return rank_word_info, len(col_boxes), res_blocks_list,
+        return rank_word_info, len(col_boxes), res_blocks_list, rank_idx_num_list, all_box_list
+
+    def draw_all_boxes(self, img_bgr, rank_idx_num_list, all_box_list, rank_word_info, words_info,
+                       large_col_boxes, problem_boxes):
+        """
+        绘制Boxes
+        """
+        import itertools
+        print('[Info] 栏数: {}'.format(len(rank_idx_num_list)))
+
+        res_col_boxes, res_prb_boxes, res_row_boxes = [], [], []
+        for col_idx, col_list in enumerate(rank_idx_num_list):
+            print('[Info] col_idx: {}, col_list: {} - {}'.format(col_idx, len(col_list), col_list))
+            merged = list(itertools.chain(*col_list))
+            merged = list(itertools.chain(*merged))
+            col_sub_boxes = [all_box_list[i] for i in merged]
+            col_one_box = merge_boxes(col_sub_boxes)
+            res_col_boxes.append(col_one_box)
+            for prb_idx, prb_list in enumerate(col_list):
+                print('\t[Info] prb_idx: {}, prb_list: {} - {}'.format(prb_idx, len(prb_list), prb_list))
+                merged = list(itertools.chain(*prb_list))
+                prb_boxes = [all_box_list[i] for i in merged]
+                prb_one_box = merge_boxes(prb_boxes)
+                res_prb_boxes.append(prb_one_box)
+                for row_idx, row_list in enumerate(prb_list):
+                    print('\t\t[Info] row_idx: {}, row_list: {} - {}'.format(row_idx, len(row_list), row_list))
+                    row_boxes = [all_box_list[i] for i in row_list]
+                    row_one_box = merge_boxes(row_boxes)
+                    res_row_boxes.append(row_one_box)
+
+        # 绘制图像1
+        img_bgr1 = copy.copy(img_bgr)
+        color_cols_list = generate_colors(len(res_col_boxes), seed=98)
+        color_prbs_list = generate_colors(len(res_prb_boxes), seed=47)
+        color_rows_list = generate_colors(len(res_row_boxes), seed=25)
+
+        for idx, xyxy in enumerate(res_col_boxes):
+            img_copy = copy.copy(img_bgr1)
+            c1, c2 = (int(xyxy[0]), int(xyxy[1])), (int(xyxy[2]), int(xyxy[3]))
+            img_bgr1 = cv2.rectangle(img_bgr1, c1, c2, color_cols_list[idx], thickness=5, lineType=cv2.LINE_AA)
+            # cv2.addWeighted(img_bgr1, 0.3, img_copy, 0.7, 0, img_bgr1)  # 添加色块
+
+        for idx, xyxy in enumerate(res_prb_boxes):
+            img_copy = copy.copy(img_bgr1)
+            c1, c2 = (int(xyxy[0]), int(xyxy[1])), (int(xyxy[2]), int(xyxy[3]))
+            img_bgr1 = cv2.rectangle(img_bgr1, c1, c2, color_prbs_list[idx], thickness=-1, lineType=cv2.LINE_AA)
+            cv2.addWeighted(img_bgr1, 0.3, img_copy, 0.7, 0, img_bgr1)  # 添加色块
+
+        for idx, xyxy in enumerate(res_row_boxes):
+            img_copy = copy.copy(img_bgr1)
+            c1, c2 = (int(xyxy[0]), int(xyxy[1])), (int(xyxy[2]), int(xyxy[3]))
+            img_bgr1 = cv2.rectangle(img_bgr1, c1, c2, color_rows_list[idx], thickness=-1, lineType=cv2.LINE_AA)
+            cv2.addWeighted(img_bgr1, 0.3, img_copy, 0.7, 0, img_bgr1)  # 添加色块
+
+        for idx, words_data in enumerate(rank_word_info):
+            pos = words_data["pos"]
+            word_rec = ImgDetector.parse_pos(pos)
+            word_box = rec2box(word_rec)
+            draw_box(img_bgr1, word_box, color=(128, 0, 128), tk=1, is_show=False, is_new=False)
+            draw_text(img_bgr1, str(idx), org=get_box_center(word_box), color=(0, 0, 255))
+
+        # 绘制图像2
+        color_cols_list = generate_colors(len(large_col_boxes), seed=72)
+        color_prbs_list = generate_colors(len(problem_boxes), seed=64)
+
+        img_bgr2 = copy.copy(img_bgr)
+        for idx, xyxy in enumerate(large_col_boxes):
+            img_copy = copy.copy(img_bgr2)
+            c1, c2 = (int(xyxy[0]), int(xyxy[1])), (int(xyxy[2]), int(xyxy[3]))
+            img_bgr2 = cv2.rectangle(img_bgr2, c1, c2, color_cols_list[idx], thickness=5, lineType=cv2.LINE_AA)
+            # cv2.addWeighted(img_bgr2, 0.3, img_copy, 0.7, 0, img_bgr2)  # 添加色块
+
+        for idx, xyxy in enumerate(problem_boxes):
+            img_copy = copy.copy(img_bgr2)
+            c1, c2 = (int(xyxy[0]), int(xyxy[1])), (int(xyxy[2]), int(xyxy[3]))
+            img_bgr2 = cv2.rectangle(img_bgr2, c1, c2, color_prbs_list[idx], thickness=-1, lineType=cv2.LINE_AA)
+            cv2.addWeighted(img_bgr2, 0.3, img_copy, 0.7, 0, img_bgr2)  # 添加色块
+            draw_text(img_bgr2, str(idx), org=get_box_center(xyxy), color=(0, 0, 255))
+
+        # 绘制图像3
+        img_bgr3 = copy.copy(img_bgr)
+        for idx, words_data in enumerate(words_info):
+            pos = words_data["pos"]
+            word_rec = ImgDetector.parse_pos(pos)
+            word_box = rec2box(word_rec)
+            draw_box(img_bgr3, word_box, color=(0, 255, 0), is_show=False, is_new=False)
+            draw_text(img_bgr3, str(idx), org=get_box_center(word_box), color=(0, 0, 255))
+
+        return img_bgr1, img_bgr2, img_bgr3
 
     def process(self, img_url):
         """
@@ -563,24 +652,9 @@ class ImgDetector(object):
         h, w, _ = img_bgr.shape
         problem_boxes = self.detect_problems(img_bgr)
         if not problem_boxes:
+            print('[Info] 题目框为空')
             return img_bgr
         # draw_box_list(img_bgr, problem_boxes, is_show=True)
-
-        # 第2步，上下排序
-        problem_boxes = self.filer_boxes_by_size(problem_boxes)
-        # draw_box_list(img_bgr, problem_boxes, is_show=True)
-        # problem_boxes 是 分栏之后的
-        col_problem_boxes, col_sorted_idxes, num_col = sorted_boxes_by_col(problem_boxes)
-        print('[Info] 页面栏数: {}'.format(num_col))
-
-        problem_boxes = []  # 去掉分栏信息
-        for pcb in col_problem_boxes:
-            problem_boxes += pcb
-        # draw_box_list(img_bgr, problem_boxes, is_show=True, save_name="1.jpg")
-
-        # 第3步，将页面分成多栏
-        large_col_boxes = self.analyze_layout(col_problem_boxes, h, w)
-        # draw_box_list(img_bgr, col_boxes, is_show=True)
 
         # 第4步，获取OCR的文本框
         words_info, word_rec_list, word_str_list, idx_list, data_dict \
@@ -588,6 +662,25 @@ class ImgDetector(object):
         word_boxes = []
         for rec in word_rec_list:
             word_boxes.append(rec2box(rec))
+
+        # 第2步，上下排序
+        problem_boxes = self.filer_boxes_by_size(problem_boxes)
+        # draw_box_list(img_bgr, problem_boxes, is_show=True)
+        # problem_boxes 是 分栏之后的
+        col_problem_boxes, col_sorted_idxes, num_col = sorted_boxes_by_col(problem_boxes, img_bgr=img_bgr)
+        print('[Info] 页面栏数: {}'.format(num_col))
+
+        for idx, sub_cols in enumerate(col_problem_boxes):
+            draw_box_list(img_bgr, sub_cols, is_show=True, save_name="problem_boxes_{}.jpg".format(idx))
+
+        problem_boxes = []  # 去掉分栏信息
+        for pcb in col_problem_boxes:
+            problem_boxes += pcb
+
+        # 第3步，将页面分成多栏
+        large_col_boxes = self.analyze_layout(col_problem_boxes, h, w, img_bgr=img_bgr)
+        draw_box_list(img_bgr, large_col_boxes, is_show=True, save_name="large_col_boxes.jpg")
+
         # draw_box_list(img_bgr, word_boxes, is_show=True)
 
         # 第5步，题目+文本框 -> 过滤
@@ -624,14 +717,15 @@ class ImgDetector(object):
 
         # 第7步，全部排序
         all_problem_boxes = problem_box_list + problem_boxes
-        col_problem_boxes, col_sorted_idxes, num_col = sorted_boxes_by_col(all_problem_boxes)
+        col_problem_boxes, col_sorted_idxes, num_col = sorted_boxes_by_col(all_problem_boxes, img_bgr=img_bgr)
         problem_boxes = []  # 去掉分栏信息
         for pcb in col_problem_boxes:
             problem_boxes += pcb
-        img_out = draw_box_list(img_bgr, problem_boxes)
+        # img_out = draw_box_list(img_bgr, problem_boxes)
 
-        rank_word_info, column_num, block_num_list = \
+        rank_word_info, column_num, block_num_list, rank_idx_num_list, all_box_list = \
             self.add_tag_to_wordinfo(img_bgr, large_col_boxes, problem_boxes, words_info)
+
         data_dict["wordsInfo"] = rank_word_info
         data_dict["columnNum"] = column_num
         data_dict["blockNumList"] = block_num_list
@@ -641,11 +735,20 @@ class ImgDetector(object):
             "data_dict": data_dict
         }
 
-        out_path = os.path.join(DATA_DIR, 'sample.txt')
+        out_path = os.path.join(DATA_DIR, 'sample-xx.txt')
         res_dict_str = json.dumps(res_dict)
         write_line(out_path, res_dict_str)
         print('[Info] 处理完成: {}'.format(out_path))
-        return img_out
+
+        img_out1, img_out2, img_out3 = \
+            self.draw_all_boxes(img_bgr, rank_idx_num_list, all_box_list,
+                                rank_word_info, words_info,
+                                large_col_boxes, problem_boxes)
+        show_img_bgr(img_out1, save_name="test1.{}.jpg".format(get_current_time_str()))
+        show_img_bgr(img_out2, save_name="test2.{}.jpg".format(get_current_time_str()))
+        show_img_bgr(img_out3, save_name="test3.{}.jpg".format(get_current_time_str()))
+
+        return img_out1, img_out2
 
 
 def evaluate_urls():
@@ -680,10 +783,14 @@ def evaluate_case():
     # img_path = os.path.join(DATA_DIR, 'test', 'fcf3445e2f6b1cfce533ba272818a24f.jpg')
     # img_bgr = cv2.imread(img_path)
     # show_img_bgr(img_bgr)
-    img_url = "https://sm-transfer.oss-cn-hangzhou.aliyuncs.com/zhengsheng.wcl/tmp/test1.jpg"
+    # img_url = "https://sm-transfer.oss-cn-hangzhou.aliyuncs.com/zhengsheng.wcl/tmp/test1.jpg"
     # img_url = "https://img.alicdn.com/imgextra/i3/6000000000052/O1CN01EvpIvD1CFrEQZjHyI_!!6000000000052-0-quark.jpg"
     # img_url = "https://img.alicdn.com/imgextra/i1/6000000005190/O1CN013t3IMJ1oD4DVlTj7b_!!6000000005190-0-quark.jpg"
     # img_url = "https://sm-transfer.oss-cn-hangzhou.aliyuncs.com/zhengsheng.wcl/tmp/test_400_out/O1CN01KseCRE1FsjhJD7ivM_!!6000000000543-0-quark.jpg"
+
+    # img_url = "http://vpf-test.oss-cn-hangzhou.aliyuncs.com/tif/images/6fae1306-54aa-11eb-9302-98039b9cea08.jpg"
+    # img_url = "http://vpf-test.oss-cn-hangzhou.aliyuncs.com/tif/images/a62ed370-54aa-11eb-94be-98039b9cea08.jpg"
+    img_url = "http://vpf-test.oss-cn-hangzhou.aliyuncs.com/tif/images/c60030cc-54aa-11eb-aeb7-98039b9cea08.jpg"
     ido = ImgDetector()
     # ido.detect_with_draw(img_bgr)
     img_out = ido.process(img_url)

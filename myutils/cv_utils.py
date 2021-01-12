@@ -826,7 +826,7 @@ def sorted_boxes_by_col(boxes, img_bgr=None):
         line_boxes = list()
         line_idxes = list()
 
-        box_idx = box_lr_idxes[i]
+        box_idx = box_ud_idxes[i]
         if idx_flag[box_idx]:
             continue
         idx_flag[box_idx] = True
@@ -838,14 +838,14 @@ def sorted_boxes_by_col(boxes, img_bgr=None):
         target_height = [target_box[1], target_box[3]]
         target_width = [target_box[0], target_box[2]]
 
-        ud_idx = np.where(box_ud_idxes == box_idx)[0]
-        ud_idx = int(ud_idx)
+        lr_idx = np.where(box_lr_idxes == box_idx)[0]
+        lr_idx = int(lr_idx)
 
         line_boxes.append(target_box)
         line_idxes.append(box_idx)
 
-        for l_i in range(ud_idx - 1, -1, -1):  # 从当前框，向上查找
-            tmp_box_idx = box_ud_idxes[l_i]
+        for l_i in range(lr_idx - 1, -1, -1):  # 从当前框，向上查找
+            tmp_box_idx = box_lr_idxes[l_i]
             if idx_flag[tmp_box_idx]:
                 continue
             tmp_box = boxes[tmp_box_idx]
@@ -859,7 +859,7 @@ def sorted_boxes_by_col(boxes, img_bgr=None):
 
             if is_width_intersect and r_height < 0.6:
                 idx_flag[tmp_box_idx] = True
-                draw_box(img_bgr, tmp_box, color=(0, 0, 255), is_show=True, is_new=False)
+                # draw_box(img_bgr, tmp_box, color=(0, 0, 255), is_show=True, is_new=False)
                 if r_width < 1:
                     target_height = [tmp_box[1], tmp_box[3]]
                 line_boxes.append(tmp_box)
@@ -876,11 +876,12 @@ def sorted_boxes_by_col(boxes, img_bgr=None):
         target_height = [target_box[1], target_box[3]]
         target_width = [target_box[0], target_box[2]]
 
-        for r_i in range(ud_idx + 1, len(box_ud_idxes)):
-            tmp_box_idx = box_ud_idxes[r_i]
+        for r_i in range(lr_idx + 1, len(box_lr_idxes)):
+            tmp_box_idx = box_lr_idxes[r_i]
             if idx_flag[tmp_box_idx]:
                 continue
             tmp_box = boxes[tmp_box_idx]
+            # print('[Info] r_i: {}, tmp_box: {}'.format(r_i, tmp_box))
             # draw_box(img_bgr, tmp_box, color=(0, 255, 0), is_show=True)
             tmp_height = [tmp_box[1], tmp_box[3]]
             tmp_width = [tmp_box[0], tmp_box[2]]
@@ -888,7 +889,7 @@ def sorted_boxes_by_col(boxes, img_bgr=None):
             is_height_intersect, r_height = check_line_intersect(target_height, tmp_height)
             is_width_intersect, r_width = check_line_intersect(target_width, tmp_width)
 
-            if is_width_intersect and r_height < 0.6:
+            if is_width_intersect and (r_height < 0.6 or r_width > 0.8):
                 idx_flag[tmp_box_idx] = True
                 # draw_box(img_bgr, tmp_box, color=(0, 0, 255), is_show=True, is_new=False)
                 if r_width < 1:
