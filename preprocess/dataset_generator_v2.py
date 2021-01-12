@@ -49,8 +49,8 @@ class DatasetGeneratorV2(object):
         return x, y, w, h
 
     @staticmethod
-    def generate_file(file_path, file_name):
-        print('[Info] file_path: {}'.format(file_path))
+    def generate_file(file_path, file_idx):
+        print('[Info] file_path: {}, file_idx: {}'.format(file_path, file_idx))
 
         url_format = "http://sm-transfer.oss-cn-hangzhou.aliyuncs.com/zhengsheng.wcl/problems_segmentation/" \
                           "datasets/prelabeled-20201224/{}.jpg"
@@ -122,10 +122,12 @@ class DatasetGeneratorV2(object):
 
             image_url = url_format.format(image_name)
             is_ok, img_bgr = download_url_img(image_url)
-            img_path = os.path.join(out_images_train_dir, '{}.jpg'.format(image_name))
+
+            out_name = "train_{}_{}".format(file_idx, idx)
+            img_path = os.path.join(out_images_train_dir, '{}.jpg'.format(out_name))
             cv2.imwrite(img_path, img_bgr)  # 写入图像
 
-            lbl_path = os.path.join(out_labels_train_dir, '{}.txt'.format(image_name))
+            lbl_path = os.path.join(out_labels_train_dir, '{}.txt'.format(out_name))
             write_list_to_file(lbl_path, bbox_yolo_list)
             print('[Info] ' + "-" * 100)
             if idx == 20:
@@ -137,10 +139,12 @@ class DatasetGeneratorV2(object):
 
             image_url = url_format.format(image_name)
             is_ok, img_bgr = download_url_img(image_url)
-            img_path = os.path.join(out_images_val_dir, '{}.jpg'.format(image_name))
+
+            out_name = "val_{}_{}".format(file_idx, idx)
+            img_path = os.path.join(out_images_val_dir, '{}.jpg'.format(out_name))
             cv2.imwrite(img_path, img_bgr)  # 写入图像
 
-            lbl_path = os.path.join(out_labels_val_dir, '{}.txt'.format(image_name))
+            lbl_path = os.path.join(out_labels_val_dir, '{}.txt'.format(out_name))
             write_list_to_file(lbl_path, bbox_yolo_list)
             print('[Info] ' + "-" * 100)
             if idx == 20:
@@ -154,10 +158,10 @@ def process():
 
     pool = Pool(processes=10)
 
-    for path, name in zip(paths_list, names_list):
+    for file_idx, (path, name) in enumerate(zip(paths_list, names_list)):
         # DatasetGeneratorV2.generate_file(path)
         print('[Info] path: {}'.format(path))
-        pool.apply_async(DatasetGeneratorV2.generate_file, (path, name))
+        pool.apply_async(DatasetGeneratorV2.generate_file, (path, file_idx))
 
     pool.close()
     pool.join()
