@@ -50,7 +50,7 @@ class DatasetGeneratorV2(object):
 
     @staticmethod
     def generate_file(file_path, file_idx):
-        print('[Info] file_path: {}, file_idx: {}'.format(file_path, file_idx))
+        print('[Info] file_path: {}, file_idx: {}'.format(file_path, str(file_idx).zfill(4)))
 
         url_format = "http://sm-transfer.oss-cn-hangzhou.aliyuncs.com/zhengsheng.wcl/problems_segmentation/" \
                           "datasets/prelabeled-20201224/{}.jpg"
@@ -123,7 +123,7 @@ class DatasetGeneratorV2(object):
             image_url = url_format.format(image_name)
             is_ok, img_bgr = download_url_img(image_url)
 
-            out_name = "train_{}_{}".format(file_idx, idx)
+            out_name = "train_{}_{}".format(file_idx, str(idx).zfill(6))
             img_path = os.path.join(out_images_train_dir, '{}.jpg'.format(out_name))
             cv2.imwrite(img_path, img_bgr)  # 写入图像
 
@@ -140,7 +140,7 @@ class DatasetGeneratorV2(object):
             image_url = url_format.format(image_name)
             is_ok, img_bgr = download_url_img(image_url)
 
-            out_name = "val_{}_{}".format(file_idx, idx)
+            out_name = "val_{}_{}".format(file_idx, str(idx).zfill(6))
             img_path = os.path.join(out_images_val_dir, '{}.jpg'.format(out_name))
             cv2.imwrite(img_path, img_bgr)  # 写入图像
 
