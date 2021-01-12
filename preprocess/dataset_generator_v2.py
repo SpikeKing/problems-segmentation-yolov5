@@ -126,9 +126,12 @@ class DatasetGeneratorV2(object):
             out_name = "train_{}_{}".format(file_idx, str(idx).zfill(6))
             img_path = os.path.join(out_images_train_dir, '{}.jpg'.format(out_name))
             cv2.imwrite(img_path, img_bgr)  # 写入图像
+            print('[Info] img_path: {}'.format(img_path))
 
             lbl_path = os.path.join(out_labels_train_dir, '{}.txt'.format(out_name))
             write_list_to_file(lbl_path, bbox_yolo_list)
+            print('[Info] lbl_path: {}'.format(lbl_path))
+            
             print('[Info] ' + "-" * 100)
             if idx == 20:
                 break
