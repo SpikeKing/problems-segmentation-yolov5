@@ -49,7 +49,7 @@ class DatasetGeneratorV2(object):
         return x, y, w, h
 
     @staticmethod
-    def generate_file(file_path):
+    def generate_file(file_path, file_name):
         print('[Info] file_path: {}'.format(file_path))
 
         url_format = "http://sm-transfer.oss-cn-hangzhou.aliyuncs.com/zhengsheng.wcl/problems_segmentation/" \
@@ -153,10 +153,11 @@ def process():
     paths_list, names_list = traverse_dir_files(dir_path)
 
     pool = Pool(processes=10)
+
     for path, name in zip(paths_list, names_list):
         # DatasetGeneratorV2.generate_file(path)
         print('[Info] path: {}'.format(path))
-        pool.apply_async(DatasetGeneratorV2.generate_file, path)
+        pool.apply_async(DatasetGeneratorV2.generate_file, (path, name))
 
     pool.close()
     pool.join()
