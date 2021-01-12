@@ -134,8 +134,8 @@ class DatasetGeneratorV2(object):
             print('[Info] lbl_path: {}'.format(lbl_path))
 
             print('[Info] ' + "-" * 100)
-            if idx == 20:
-                break
+            # if idx == 20:
+            #     break
 
         for idx, image_name in enumerate(image_val_list):
             print('[Info] idx: {}'.format(idx))
@@ -154,8 +154,8 @@ class DatasetGeneratorV2(object):
             print('[Info] lbl_path: {}'.format(lbl_path))
 
             print('[Info] ' + "-" * 100)
-            if idx == 20:
-                break
+            # if idx == 20:
+            #     break
         print('[Info] 处理完成! {}'.format(file_path))
 
 
