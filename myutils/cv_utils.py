@@ -31,18 +31,23 @@ def draw_line_len(img_bgr, start_p, v_length, v_arrow, is_new=True, is_show=Fals
 
 
 def draw_text(img_bgr, text, org=(3, 20), color=(0, 0, 255)):
+    """
+    绘制文字，自动调整文字大小
+    """
     import cv2
     h, w, _ = img_bgr.shape
-    m = max(h, w)
+    m = h * w
     text = str(text)
 
     font = cv2.FONT_HERSHEY_SIMPLEX
-    fontScale = m / float(4000)
-    thickness = m // 800
+    font_scale = m / 8000000
+    font_scale = max(font_scale, 1.0)
+    thickness = m // 4000000
+    thickness = max(thickness, 2)
+    # print('[Info] font_scale: {}, thickness: {}, max: {}, x: {}'.format(font_scale, thickness, m, h*w))
     lineType = 2
 
-    img_bgr = cv2.putText(img_bgr, text, org, font,
-                          fontScale, color, thickness, lineType)
+    img_bgr = cv2.putText(img_bgr, text, org, font, font_scale, color, thickness, lineType)
     return img_bgr
 
 
@@ -113,7 +118,7 @@ def draw_eyes(img_bgr, eyes_landmarks, radius, offsets_list, is_new=True, is_sho
     return img_bgr
 
 
-def draw_box(img_bgr, box, color=(0, 0, 255), is_show=True, is_new=True):
+def draw_box(img_bgr, box, color=(0, 0, 255), is_show=True, is_new=True, tk=None):
     """
     绘制box
     """
@@ -129,7 +134,10 @@ def draw_box(img_bgr, box, color=(0, 0, 255), is_show=True, is_new=True):
 
     ih, iw, _ = img_bgr.shape
     # color = (0, 0, 255)
-    tk = max(min(ih, iw) // 200, 2)
+    if not tk:
+        tk = max(min(ih, iw) // 200, 2)
+    else:
+        tk = tk
 
     cv2.rectangle(img_bgr, (x_min, y_min), (x_max, y_max), color, tk)
 
@@ -384,13 +392,13 @@ def mid_point(p1, p2):
     return [x, y]
 
 
-def generate_colors(n_colors):
+def generate_colors(n_colors, seed=47):
     """
     随机生成颜色
     """
     import numpy as np
 
-    np.random.seed(47)
+    np.random.seed(seed)
     color_list = []
     for i in range(n_colors):
         color = (np.random.random((1, 3)) * 0.8).tolist()[0]
@@ -740,7 +748,7 @@ def get_box_center(box):
     return x, y
 
 
-def draw_box_list(img_bgr, box_list, is_arrow=False, is_show=False, save_name=None):
+def draw_box_list(img_bgr, box_list, is_arrow=False, is_text=True, is_show=False, save_name=None):
     """
     绘制矩形列表
     """
@@ -772,7 +780,8 @@ def draw_box_list(img_bgr, box_list, is_arrow=False, is_show=False, save_name=No
                                 line_type=cv2.LINE_4, shift=0, tipLength=0.05)
             next_point = point
             pre_color = color_list[idx]
-        draw_text(ori_img, str(idx), point)  # 绘制序号
+        if is_text:
+            draw_text(ori_img, str(idx), point)  # 绘制序号
 
     if is_show:
         show_img_bgr(ori_img, save_name=save_name)
@@ -850,7 +859,7 @@ def sorted_boxes_by_col(boxes, img_bgr=None):
 
             if is_width_intersect and r_height < 0.6:
                 idx_flag[tmp_box_idx] = True
-                # draw_box(img_bgr, tmp_box, color=(0, 0, 255), is_show=True, is_new=False)
+                draw_box(img_bgr, tmp_box, color=(0, 0, 255), is_show=True, is_new=False)
                 if r_width < 1:
                     target_height = [tmp_box[1], tmp_box[3]]
                 line_boxes.append(tmp_box)
