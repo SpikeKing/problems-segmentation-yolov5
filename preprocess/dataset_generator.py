@@ -255,9 +255,9 @@ def main():
     print('[Info] 处理开始')
     dg = DatasetGenerator()
 
-    # dg.generate()  # 生成数据集
+    dg.generate()  # 生成数据集
     # dg.check_dataset()  # 检查数据集
-    dg.split_prelabeled_data()  # 切分标注数据
+    # dg.split_prelabeled_data()  # 切分标注数据
 
 
 if __name__ == "__main__":

@@ -15,7 +15,7 @@ from root_dir import DATA_DIR
 
 class PageDataset(object):
     def __init__(self):
-        self.index = 1
+        self.index = 0
         self.data_raw_dir = os.path.join(DATA_DIR, 'page_dataset_raw')
         self.data_mini_file = os.path.join(DATA_DIR, 'page_dataset_mini_{}.txt'.format(self.index))
 
@@ -33,12 +33,24 @@ class PageDataset(object):
         print('[Info] 总行数: {}'.format(len(data_lines)))
 
         random.seed(47)
+        data_lines = list(set(data_lines))
         random.shuffle(data_lines)
 
-        mini_lines = data_lines[:50]
-        print('[Info] 小样本数: {}'.format(len(mini_lines)))
-        for data_line in mini_lines:
-            write_line(self.data_mini_file, data_line)
+        out_dir = os.path.join(DATA_DIR, 'pages_2021_01_12_split')
+        mkdir_if_not_exist(out_dir)
+
+        num = 1000
+        out_file_format = os.path.join(out_dir, "cases_{}_{}.txt")
+        s_num, e_num = 0, num
+        for i, data_line in enumerate(data_lines):
+            if s_num <= i < e_num:
+                out_file = out_file_format.format(s_num+1, e_num)
+            else:
+                s_num = e_num
+                e_num += num
+                e_num = e_num if e_num < len(data_lines) else len(data_lines)
+                out_file = out_file_format.format(s_num+1, e_num)
+            write_line(out_file, data_line)
 
         print('[Info] 写入文件完成! {}'.format(self.data_mini_file))
 
