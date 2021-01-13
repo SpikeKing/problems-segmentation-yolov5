@@ -41,9 +41,9 @@ def draw_text(img_bgr, text, org=(3, 20), color=(0, 0, 255)):
 
     font = cv2.FONT_HERSHEY_SIMPLEX
     font_scale = m / 8000000
-    font_scale = max(font_scale, 1.0)
+    font_scale = max(font_scale, 0.5)
     thickness = m // 4000000
-    thickness = max(thickness, 2)
+    thickness = max(thickness, 1)
     # print('[Info] font_scale: {}, thickness: {}, max: {}, x: {}'.format(font_scale, thickness, m, h*w))
     lineType = 2
 
@@ -807,8 +807,6 @@ def sorted_boxes_by_col(boxes, img_bgr=None):
     """
     print('[Info] 排序boxes开始!')
     x_min_list, y_min_list = [], []
-    n_boxes = len(boxes)
-    idx_flag = [False] * len(boxes)
 
     # 从左到右(lr)、从上到下(ud)排序
     for box in boxes:
@@ -821,6 +819,9 @@ def sorted_boxes_by_col(boxes, img_bgr=None):
     sorted_boxes, sorted_idxes = [], []  # 最终的box结果
 
     num_row = 0
+
+    n_boxes = len(boxes)
+    idx_flag = [False] * len(boxes)
 
     for i in range(n_boxes):
         line_boxes = list()
