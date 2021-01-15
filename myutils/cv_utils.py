@@ -133,9 +133,10 @@ def draw_box(img_bgr, box, color=(0, 0, 255), is_show=True, is_new=True, tk=None
     # print(x_min, y_min, x_max, y_max)
 
     ih, iw, _ = img_bgr.shape
-    # color = (0, 0, 255)
     if not tk:
-        tk = max(min(ih, iw) // 200, 2)
+        m = ih * iw
+        tk = m // 4000000
+        tk = max(tk, 1)
     else:
         tk = tk
 
