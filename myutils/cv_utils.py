@@ -806,7 +806,7 @@ def sorted_boxes_by_col(boxes, img_bgr=None):
     """
     根据位置, 按列排序boxes
     """
-    print('[Info] 排序boxes开始!')
+    # print('[Info] 排序boxes开始!')
     x_min_list, y_min_list = [], []
 
     # 从左到右(lr)、从上到下(ud)排序
@@ -918,7 +918,7 @@ def sorted_boxes_by_col(boxes, img_bgr=None):
 
     # draw_box_list(img_bgr, final_boxes, is_show=True)
     # show_img_bgr(img_bgr)
-    print('[Info] 排序box结束, 行数: {}'.format(num_row))
+    # print('[Info] 排序box结束, 行数: {}'.format(num_row))
     return sorted_boxes, sorted_idxes, num_row
 
 

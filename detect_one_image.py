@@ -27,6 +27,7 @@ class ImgDetector(object):
     """
     def __init__(self):
         self.weights = "mydata/models/best_20201224.pt"
+        # self.weights = "mydata/models/best_20210118.pt"
 
         self.img_size = 640
         self.conf_thres = 0.25
@@ -154,15 +155,41 @@ def main():
 
     no = 5
 
-    img_url = "https://sm-transfer.oss-cn-hangzhou.aliyuncs.com/sanghu.zj/question_cut/qcut_multI_question_compare/org{}.jpg".format(no)
+    img_url = "http://sm-frontend-quark-photo.oss-cn-hangzhou.aliyuncs.com/eb89a26b2b82337a00acd102d1810520.jpg"
     is_ok, img_bgr = download_url_img(img_url)
 
     box_list = ido.detect_problems(img_bgr)
 
     img_out = draw_problems_boxes(img_bgr, box_list)
     show_img_bgr(img_out)
-    cv2.imwrite(os.path.join(DATA_DIR, "org{}.jpg".format(no)), img_out)
+    cv2.imwrite(os.path.join(DATA_DIR, "xxx.jpg".format(no)), img_out)
+
+
+def process():
+    file_path = os.path.join(DATA_DIR, 'page_dataset_raw',
+                             'sanghu.zj_question_cut_sampled_kousuanpigai_url_3w_0104')
+
+    out_dir = os.path.join(DATA_DIR, 'zhengyepai-old')
+    mkdir_if_not_exist(out_dir)
+
+    data_lines = read_file(file_path)
+    data_lines = data_lines[:201]
+    print('[Info] 样本数: {}'.format(len(data_lines)))
+    ido = ImgDetector()
+
+    for idx, data_line in enumerate(data_lines):
+        img_name = data_line.split('/')[-1]
+        url = data_line
+        is_ok, img_bgr = download_url_img(url)
+
+        box_list = ido.detect_problems(img_bgr)
+
+        img_out = draw_problems_boxes(img_bgr, box_list)
+        out_path = os.path.join(out_dir, img_name)
+        cv2.imwrite(out_path, img_out)
+        print('[Info] {} 处理完成: {}'.format(idx, url))
 
 
 if __name__ == '__main__':
     main()
+    # process()

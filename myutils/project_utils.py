@@ -314,6 +314,16 @@ def sort_dict_by_value(dict_, reverse=True):
     return sorted(dict_.items(), key=operator.itemgetter(1), reverse=reverse)
 
 
+def sort_dict_by_key(dict_, reverse=False):
+    """
+    按照values排序字典
+    :param dict_: 待排序字典
+    :param reverse: 默认从大到小
+    :return: 排序后的字典
+    """
+    return sorted(dict_.items(), key=operator.itemgetter(0), reverse=reverse)
+
+
 def get_current_time_str():
     """
     输入当天的日期格式, 20170718_1137
