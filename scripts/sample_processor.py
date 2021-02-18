@@ -6,7 +6,6 @@ Created by C. L. Wang on 12.1.21
 """
 
 import os
-import cv2
 import sys
 
 p = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
@@ -17,7 +16,6 @@ from multiprocessing.pool import Pool
 from myutils.project_utils import *
 from root_dir import DATA_DIR
 from myutils.cv_utils import *
-from x_utils.vpf_utils import get_problem_segmentation_cv_vpf_service
 
 
 class SampleProcessor(object):
