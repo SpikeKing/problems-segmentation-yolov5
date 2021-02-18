@@ -50,13 +50,13 @@ class SampleProcessor(object):
         random.seed(47)
         random.shuffle(data_lines)
 
-        data_lines = data_lines[0:200]
+        # data_lines = data_lines[0:200]
         print('[Info] 样本数: {}'.format(len(data_lines)))
 
         paths_list, names_list = traverse_dir_files(self.out_dir)  # 用于避免重复生产
         p = Pool(processes=40)
         for idx, data_line in enumerate(data_lines):
-            SampleProcessor.process_img_url(idx, data_line, names_list, self.out_dir)
+            # SampleProcessor.process_img_url(idx, data_line, names_list, self.out_dir)
             p.apply_async(SampleProcessor.process_img_url, (idx, data_line, names_list, self.out_dir))
             print('[Info] ' + '-' * 50)
 
