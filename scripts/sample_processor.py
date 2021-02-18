@@ -7,6 +7,11 @@ Created by C. L. Wang on 12.1.21
 
 import os
 import cv2
+import sys
+
+p = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+if p not in sys.path:
+    sys.path.append(p)
 
 from multiprocessing.pool import Pool
 from myutils.project_utils import *
