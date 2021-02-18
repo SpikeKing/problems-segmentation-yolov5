@@ -65,8 +65,8 @@ img{
     # image_paths2 = ["https://img.alicdn.com/imgextra/i2/6000000003335/O1CN01aNTJ931aVTVuytHXc_!!6000000003335-0-quark.jpg",
     #                "https://img.alicdn.com/imgextra/i2/6000000003335/O1CN01aNTJ931aVTVuytHXc_!!6000000003335-0-quark.jpg"]
 
-    image_file1 = os.path.join(DATA_DIR, "long_text_2020-12-07-15-21-36_家德.out1.txt")
-    image_file2 = os.path.join(DATA_DIR, "long_text_2020-12-07-15-21-36_家德.out2.txt")
+    image_file1 = os.path.join(DATA_DIR, "url_0108_高航.out1.txt")
+    image_file2 = os.path.join(DATA_DIR, "url_0108_高航.out2.txt")
     image_paths = read_file(image_file1)
     image_paths2 = read_file(image_file2)
     html_file = "xxx.html"

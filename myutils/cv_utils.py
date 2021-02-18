@@ -415,6 +415,7 @@ def show_img_bgr(img_bgr, save_name=None):
     展示BGR彩色图
     """
     import cv2
+    import matplotlib
     import matplotlib.pyplot as plt
 
     img_rgb = cv2.cvtColor(img_bgr, cv2.COLOR_BGR2RGB)

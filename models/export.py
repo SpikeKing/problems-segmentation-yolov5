@@ -50,7 +50,7 @@ if __name__ == '__main__':
                 m.act = SiLU()
         # elif isinstance(m, models.yolo.Detect):
         #     m.forward = m.forward_export  # assign forward (optional)
-    model.model[-1].export = True  # set Detect() layer export=True
+    model.model[-1].export = False  # set Detect() layer export=True
     y = model(img)  # dry run
 
     # TorchScript export

@@ -8,6 +8,7 @@ import copy
 import os
 import itertools
 import cv2
+import onnxruntime
 import numpy as np
 import torch
 
@@ -26,16 +27,20 @@ class ImgDetector(object):
     图像检测
     """
     def __init__(self):
-        self.weights = "mydata/models/best_20201224.pt"
-        # self.weights = "mydata/models/best_20210118.pt"
+        # self.weights = "mydata/models/best-20201224.pt"
+        # self.weights = "mydata/models/best-20210118.pt"
+        self.weights = "mydata/models/best-m-20210121.pt"
 
         self.img_size = 640
-        self.conf_thres = 0.25
+        self.conf_thres = 0.15
         self.iou_thres = 0.45
 
         self.device = select_device()  # 自动选择环境
         self.is_half = self.device.type != 'cpu'  # half precision only supported on CUDA
         self.model, self.img_size = self.load_model()  # 加载模型
+
+        self.onnx_path = os.path.join(DATA_DIR, 'models', 'best-m-20210121.onnx')
+        self.onnx_sess = self.load_onnx_model()
 
     def load_model(self):
         """
@@ -58,7 +63,7 @@ class ImgDetector(object):
         图像预处理
         """
         # Padded resize
-        img_bgr = letterbox(img_bgr, new_shape=self.img_size)[0]
+        img_bgr = letterbox(img_bgr, new_shape=self.img_size, auto=False, scaleFill=True)[0]
 
         # Convert
         img_rgb = img_bgr[:, :, ::-1].transpose(2, 0, 1)  # BGR to RGB, to 3x416x416
@@ -80,9 +85,56 @@ class ImgDetector(object):
         img_ori = copy.copy(img_bgr)
 
         img = self.preprocess_data(img_bgr)  # 预处理数据
+
         pred = self.model(img, augment=False)[0]  # 预测图像
 
         pred = non_max_suppression(pred, self.conf_thres, self.iou_thres)  # NMS后处理
+
+        box_list = []  # 最终输出
+        for i, det in enumerate(pred):  # detections per image
+            # 回复图像尺寸
+            det[:, :4] = scale_coords(img.shape[2:], det[:, :4], img_ori.shape).round()
+            det = det.tolist()
+
+            for *xyxy, conf, cls in reversed(det):  # 绘制图像
+                xyxy = [int(i) for i in xyxy]
+                conf = round(conf, 4)
+                cls = int(cls)
+                # output_list.append([xyxy, conf, cls])
+                box_list.append(xyxy)
+
+        return box_list
+
+    def load_onnx_model(self):
+        """
+        加载onnx模型
+        """
+        onnx_sess = onnxruntime.InferenceSession(self.onnx_path)
+        onnx_sess.get_modelmeta()
+
+        inputs_meta = onnx_sess.get_inputs()
+        for in_meta in inputs_meta:
+            print('[Info] in_meta name: {}'.format(in_meta.name))
+
+        outputs_meta = onnx_sess.get_outputs()
+        for out_meta in outputs_meta:
+            print('[Info] out_meta name: {}'.format(out_meta.name))
+
+        return onnx_sess
+
+    def detect_problems_by_onnx(self, img_bgr):
+        """
+        预测题目
+        """
+        img_ori = copy.copy(img_bgr)
+
+        img = self.preprocess_data(img_bgr)  # 预处理数据
+
+        img_np = img.numpy()
+
+        pred_onnx = self.onnx_sess.run(["output"], {"images": img_np})[0]
+        pred_onnx = torch.from_numpy(pred_onnx).to(self.device)
+        pred = non_max_suppression(pred_onnx, self.conf_thres, self.iou_thres)  # NMS后处理
 
         box_list = []  # 最终输出
         for i, det in enumerate(pred):  # detections per image
@@ -140,6 +192,7 @@ def filer_boxes_by_size(boxes, r_thr=0.5):
 
     return new_boxes
 
+
 def draw_problems_boxes(img_bgr, box_list):
     box_list = filer_boxes_by_size(box_list)
     sorted_boxes, sorted_idxes, num_row = sorted_boxes_by_col(box_list)
@@ -150,19 +203,23 @@ def draw_problems_boxes(img_bgr, box_list):
     return img_out
 
 
-def main():
+def normal_vs_onnx():
     ido = ImgDetector()
 
-    no = 5
+    img_bgr = cv2.imread(os.path.join(DATA_DIR, 'test', 'test1.jpg'))
 
-    img_url = "http://sm-frontend-quark-photo.oss-cn-hangzhou.aliyuncs.com/eb89a26b2b82337a00acd102d1810520.jpg"
-    is_ok, img_bgr = download_url_img(img_url)
+    onnx_box_list = ido.detect_problems_by_onnx(img_bgr)
+
+    img_onnx = draw_problems_boxes(img_bgr, onnx_box_list)
+    onnx_path = os.path.join(DATA_DIR, 'test', "test1.onnx.jpg")
+    cv2.imwrite(onnx_path, img_onnx)
+    print('[Info] onnx输出路径: {}'.format(onnx_path))
 
     box_list = ido.detect_problems(img_bgr)
-
     img_out = draw_problems_boxes(img_bgr, box_list)
-    show_img_bgr(img_out)
-    cv2.imwrite(os.path.join(DATA_DIR, "xxx.jpg".format(no)), img_out)
+    out_path = os.path.join(DATA_DIR, 'test', "test1.out.jpg")
+    cv2.imwrite(out_path, img_out)
+    print('[Info] out输出路径: {}'.format(out_path))
 
 
 def process():
@@ -190,6 +247,9 @@ def process():
         print('[Info] {} 处理完成: {}'.format(idx, url))
 
 
+def main():
+    normal_vs_onnx()
+
+
 if __name__ == '__main__':
     main()
-    # process()

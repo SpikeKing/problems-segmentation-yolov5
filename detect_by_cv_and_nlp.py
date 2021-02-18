@@ -29,7 +29,7 @@ class ImgDetector(object):
     图像检测
     """
     def __init__(self):
-        self.weights = "mydata/models/best_20201224.pt"
+        self.weights = "mydata/models/best-20201224.pt"
 
         self.img_size = 640
         self.conf_thres = 0.25
@@ -903,7 +903,7 @@ class ImgDetector(object):
         if not cv_problem_boxes:
             print('[Info] 题目框为空')
             return img_bgr, img_bgr, img_bgr
-        # draw_box_list(img_bgr, problem_boxes, is_show=True)
+        # draw_box_list(img_bgr, cv_problem_boxes, is_show=True)
 
         # 第1步，获取OCR的文本框
         words_info, word_rec_list, word_str_list, idx_list, data_dict \

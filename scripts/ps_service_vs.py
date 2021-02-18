@@ -17,18 +17,20 @@ from x_utils.vpf_utils import get_problem_segmentation_vpf_service, get_problem_
 
 class PsServiceVS(object):
     def __init__(self):
-        self.file_path = os.path.join(DATA_DIR, "long_text_2020-12-07-15-21-36_家德.txt")
-        self.out1_path = os.path.join(DATA_DIR, "long_text_2020-12-07-15-21-36_家德.out1.txt")
-        self.out2_path = os.path.join(DATA_DIR, "long_text_2020-12-07-15-21-36_家德.out2.txt")
+        self.file_path = os.path.join(DATA_DIR, "url_0108_高航.txt")
+        self.out1_path = os.path.join(DATA_DIR, "url_0108_高航.out1.txt")
+        create_file(self.out1_path)
+        self.out2_path = os.path.join(DATA_DIR, "url_0108_高航.out2.txt")
+        create_file(self.out2_path)
 
     @staticmethod
     def process_url(idx, url, out1_path, out2_path):
         print('[Info] url: {}'.format(url))
         try:
-            data_dict1 = get_problem_segmentation_vpf_service(url)
-            data_dict2 = get_problem_segmentation_vpf_service_v2(url)
-            out_img_url1 = data_dict1["data"]["oss_url_out3"]
-            out_img_url2 = data_dict2["data"]["oss_url_out3"]
+            data_dict1 = get_problem_segmentation_vpf_service_v2(url)
+            data_dict2 = get_problem_segmentation_vpf_service(url)
+            out_img_url1 = data_dict1["data"]["oss_url_out2"]
+            out_img_url2 = data_dict2["data"]["oss_url_out2"]
         except Exception as e:
             return
         print("out_img_url1: {}".format(out_img_url1))
