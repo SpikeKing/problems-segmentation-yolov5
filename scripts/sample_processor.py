@@ -39,7 +39,7 @@ class SampleProcessor(object):
         if img_name in names_list:
             print('[Info] 已处理: {}'.format(img_name))
             return
-        print('[Info] img_url: {}, img_name: {}'.format(img_url, img_name))
+        # print('[Info] img_url: {}, img_name: {}'.format(img_url, img_name))
 
         # res_dict = get_problem_segmentation_vpf_service(img_url)
         # oss_url_out1 = res_dict['data']['oss_url_out2']
@@ -47,7 +47,7 @@ class SampleProcessor(object):
         # res_dict = get_problem_segmentation_cv_vpf_service(img_url)
         # oss_url = res_dict['data']['oss_url']
 
-        print('[Info] img_url: {}'.format(img_url))
+        # print('[Info] img_url: {}'.format(img_url))
         is_ok, img_bgr = download_url_img(img_url)
         out_path = os.path.join(out_dir, img_name)
 
