@@ -750,10 +750,13 @@ def get_box_center(box):
     return x, y
 
 
-def draw_box_list(img_bgr, box_list, is_arrow=False, is_text=True, is_show=False, save_name=None):
+def draw_box_list(img_bgr, box_list, is_arrow=False, is_text=True, is_show=False, is_new=False, save_name=None):
     """
     绘制矩形列表
     """
+    if is_new:
+        img_bgr = copy.deepcopy(img_bgr)
+
     n_box = len(box_list)
     color_list = generate_colors(n_box)  # 随机生成颜色
     ori_img = copy.copy(img_bgr)

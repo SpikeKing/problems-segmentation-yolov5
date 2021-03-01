@@ -5,20 +5,20 @@ Copyright (c) 2020. All rights reserved.
 Created by C. L. Wang on 6.1.21
 """
 
+import collections
+import json
 import os
 import sys
-import json
-import cv2
-import collections
-
 from multiprocessing.pool import Pool
+
+import cv2
 
 p = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 if p not in sys.path:
     sys.path.append(p)
 
-from myutils.cv_utils import draw_box
-from myutils.project_utils import *
+from myutils.project_utils import mkdir_if_not_exist, read_file, download_url_img, write_list_to_file, \
+    traverse_dir_files
 from root_dir import DATA_DIR
 
 

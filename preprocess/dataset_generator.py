@@ -194,10 +194,10 @@ class DatasetGenerator(object):
         print('[Info] 处理完成: {}'.format(out_dataset_dir))
 
     def check_dataset(self):
-        dataset_dir = os.path.join(DATA_DIR, 'ps_datasets')
+        dataset_dir = os.path.join(DATA_DIR, 'ps_datasets_v3')
         images_dir = os.path.join(dataset_dir, 'images', 'train')
         labels_dir = os.path.join(dataset_dir, 'labels', 'train')
-        out_dir = os.path.join(DATA_DIR, 'ps_datasets_checked')
+        out_dir = os.path.join(DATA_DIR, 'ps_checked_{}'.format(get_current_time_str()))
         mkdir_if_not_exist(out_dir)
 
         paths_list, names_list = traverse_dir_files(images_dir)
