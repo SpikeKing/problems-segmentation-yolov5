@@ -23,7 +23,9 @@ class DatasetGeneratorV3(object):
     数据集生成
     """
     def __init__(self):
-        self.file_path = os.path.join(DATA_DIR, 'page_dataset_raw', '7_train_ori_gaoyan.txt')
+        # self.file_path = os.path.join(DATA_DIR, 'page_dataset_raw', '7_train_ori_gaoyan.txt')
+        self.file_path = os.path.join(DATA_DIR, 'page_dataset_raw', '8_train_bkg_gaoyan.txt')
+
         # self.out_dir = os.path.join(DATA_DIR, 'ps_datasets_v3')
         # mkdir_if_not_exist(self.out_dir)
         # self.imgs_dir = os.path.join(self.out_dir, 'images')
@@ -94,20 +96,22 @@ class DatasetGeneratorV3(object):
     @staticmethod
     def process_line(idx, data_line, img_dir, lbl_dir):
         print('-' * 50)
-        img_format = "http://sm-transfer.oss-cn-hangzhou.aliyuncs.com/yjb219735/ori_imgs/{}"
+
         # print('[Info] idx: {}, data_line: {}'.format(idx, data_line))
         data_dict = json.loads(data_line)
-        img_name = data_dict['url']
+        img_url = data_dict['url']
 
-        name_x = img_name.split('.')[0]
+        # 不同文件使用不同的文件名
         file_idx = str(idx).zfill(5)
-        img_path = os.path.join(img_dir, 'v4_{}.jpg'.format(file_idx))
-        lbl_path = os.path.join(lbl_dir, 'v4_{}.txt'.format(file_idx))
+        img_path = os.path.join(img_dir, 'v4_8_{}.jpg'.format(file_idx))
+        lbl_path = os.path.join(lbl_dir, 'v4_8_{}.txt'.format(file_idx))
 
-        img_url = img_format.format(img_name)
+        # format逻辑
+        # img_format = "http://sm-transfer.oss-cn-hangzhou.aliyuncs.com/yjb219735/ori_imgs/{}"
+        # img_url = img_format.format(img_url)
         # print('[Info] img_url: {}'.format(img_url))
+
         is_ok, img_bgr = download_url_img(img_url)
-        # print('[Info] img_bgr: {}'.format(img_bgr.shape))
 
         cv2.imwrite(img_path, img_bgr)  # 写入图像
 
@@ -151,9 +155,10 @@ class DatasetGeneratorV3(object):
         random.shuffle(data_lines)
         print('[Info] 文件数: {}'.format(len(data_lines)))
 
-        n_split = len(data_lines) // 10
-        train_lines = data_lines[:n_split*9]
-        val_lines = data_lines[n_split*9:]
+        n_x = 20
+        n_split = len(data_lines) // n_x
+        train_lines = data_lines[:n_split*(n_x-1)]
+        val_lines = data_lines[n_split*(n_x-1):]
         print('[Info] 训练: {}, 测试: {}'.format(len(train_lines), len(val_lines)))
 
         pool = Pool(processes=100)
