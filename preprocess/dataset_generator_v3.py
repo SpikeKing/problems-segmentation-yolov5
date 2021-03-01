@@ -103,8 +103,8 @@ class DatasetGeneratorV3(object):
 
         # 不同文件使用不同的文件名
         file_idx = str(idx).zfill(5)
-        img_path = os.path.join(img_dir, 'v4_8_{}.jpg'.format(file_idx))
-        lbl_path = os.path.join(lbl_dir, 'v4_8_{}.txt'.format(file_idx))
+        img_path = os.path.join(img_dir, 'v4_x_{}.jpg'.format(file_idx))
+        lbl_path = os.path.join(lbl_dir, 'v4_x_{}.txt'.format(file_idx))
 
         # format逻辑
         # img_format = "http://sm-transfer.oss-cn-hangzhou.aliyuncs.com/yjb219735/ori_imgs/{}"
