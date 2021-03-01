@@ -15,7 +15,7 @@ if p not in sys.path:
 
 from myutils.project_utils import *
 from myutils.cv_utils import *
-from root_dir import DATA_DIR
+from root_dir import DATA_DIR, ROOT_DIR
 
 
 class DatasetGeneratorV3(object):
@@ -24,20 +24,28 @@ class DatasetGeneratorV3(object):
     """
     def __init__(self):
         self.file_path = os.path.join(DATA_DIR, 'page_dataset_raw', '7_train_ori_gaoyan.txt')
-        self.out_dir = os.path.join(DATA_DIR, 'ps_datasets_v3')
-        mkdir_if_not_exist(self.out_dir)
+        # self.out_dir = os.path.join(DATA_DIR, 'ps_datasets_v3')
+        # mkdir_if_not_exist(self.out_dir)
+        # self.imgs_dir = os.path.join(self.out_dir, 'images')
+        # self.lbls_dir = os.path.join(self.out_dir, 'labels')
+        # mkdir_if_not_exist(self.imgs_dir)
+        # mkdir_if_not_exist(self.lbls_dir)
+        # self.train_imgs_dir = os.path.join(self.imgs_dir, 'train')
+        # self.val_imgs_dir = os.path.join(self.imgs_dir, 'val')
+        # mkdir_if_not_exist(self.train_imgs_dir)
+        # mkdir_if_not_exist(self.val_imgs_dir)
+        # self.train_lbls_dir = os.path.join(self.lbls_dir, 'train')
+        # self.val_lbls_dir = os.path.join(self.lbls_dir, 'val')
+        # mkdir_if_not_exist(self.train_lbls_dir)
+        # mkdir_if_not_exist(self.val_lbls_dir)
+
+        self.out_dir = os.path.join(ROOT_DIR, '..', 'datasets', 'segmention_ds_v3_4')
         self.imgs_dir = os.path.join(self.out_dir, 'images')
         self.lbls_dir = os.path.join(self.out_dir, 'labels')
-        mkdir_if_not_exist(self.imgs_dir)
-        mkdir_if_not_exist(self.lbls_dir)
         self.train_imgs_dir = os.path.join(self.imgs_dir, 'train')
         self.val_imgs_dir = os.path.join(self.imgs_dir, 'val')
-        mkdir_if_not_exist(self.train_imgs_dir)
-        mkdir_if_not_exist(self.val_imgs_dir)
         self.train_lbls_dir = os.path.join(self.lbls_dir, 'train')
         self.val_lbls_dir = os.path.join(self.lbls_dir, 'val')
-        mkdir_if_not_exist(self.train_lbls_dir)
-        mkdir_if_not_exist(self.val_lbls_dir)
 
 
     @staticmethod
