@@ -146,7 +146,7 @@ class DatasetGeneratorV3(object):
         print('[Info] file_path: {}'.format(self.file_path))
 
         data_lines = read_file(self.file_path)
-        data_lines = data_lines[:20]
+        # data_lines = data_lines[:20]
         random.seed(47)
         random.shuffle(data_lines)
         print('[Info] 文件数: {}'.format(len(data_lines)))
@@ -156,7 +156,7 @@ class DatasetGeneratorV3(object):
         val_lines = data_lines[n_split*9:]
         print('[Info] 训练: {}, 测试: {}'.format(len(train_lines), len(val_lines)))
 
-        pool = Pool(processes=20)
+        pool = Pool(processes=100)
         for idx, data_line in enumerate(train_lines):
             # DatasetGeneratorV3.process_line(idx, data_line, self.train_imgs_dir, self.train_lbls_dir)
             pool.apply_async(DatasetGeneratorV3.process_line,
