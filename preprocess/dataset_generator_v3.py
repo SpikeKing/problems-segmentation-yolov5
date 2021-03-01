@@ -39,14 +39,13 @@ class DatasetGeneratorV3(object):
         # mkdir_if_not_exist(self.train_lbls_dir)
         # mkdir_if_not_exist(self.val_lbls_dir)
 
-        self.out_dir = os.path.join(ROOT_DIR, '..', 'datasets', 'segmention_ds_v3_4')
+        self.out_dir = os.path.join(ROOT_DIR, '..', 'datasets', 'segmentation_ds_v4')
         self.imgs_dir = os.path.join(self.out_dir, 'images')
         self.lbls_dir = os.path.join(self.out_dir, 'labels')
         self.train_imgs_dir = os.path.join(self.imgs_dir, 'train')
         self.val_imgs_dir = os.path.join(self.imgs_dir, 'val')
         self.train_lbls_dir = os.path.join(self.lbls_dir, 'train')
         self.val_lbls_dir = os.path.join(self.lbls_dir, 'val')
-
 
     @staticmethod
     def convert(iw, ih, box):
@@ -101,8 +100,9 @@ class DatasetGeneratorV3(object):
         img_name = data_dict['url']
 
         name_x = img_name.split('.')[0]
-        img_path = os.path.join(img_dir, '{}.jpg'.format(name_x))
-        lbl_path = os.path.join(lbl_dir, '{}.txt'.format(name_x))
+        file_idx = str(idx).zfill(5)
+        img_path = os.path.join(img_dir, 'v4_{}.jpg'.format(file_idx))
+        lbl_path = os.path.join(lbl_dir, 'v4_{}.txt'.format(file_idx))
 
         img_url = img_format.format(img_name)
         # print('[Info] img_url: {}'.format(img_url))
