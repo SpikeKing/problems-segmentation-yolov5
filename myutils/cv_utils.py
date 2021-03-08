@@ -118,7 +118,7 @@ def draw_eyes(img_bgr, eyes_landmarks, radius, offsets_list, is_new=True, is_sho
     return img_bgr
 
 
-def draw_box(img_bgr, box, color=(0, 0, 255), is_show=True, is_new=True, tk=None):
+def draw_box(img_bgr, box, color=(0, 0, 255), is_show=True, is_new=True, tk=None, save_name=None):
     """
     绘制box
     """
@@ -143,10 +143,7 @@ def draw_box(img_bgr, box, color=(0, 0, 255), is_show=True, is_new=True, tk=None
     cv2.rectangle(img_bgr, (x_min, y_min), (x_max, y_max), color, tk)
 
     if is_show:
-        import matplotlib.pyplot as plt
-        img_rgb = cv2.cvtColor(img_bgr, cv2.COLOR_BGR2RGB)
-        plt.imshow(img_rgb)
-        plt.show()
+        show_img_bgr(img_bgr, save_name)
 
     return img_bgr
 
@@ -416,6 +413,7 @@ def show_img_bgr(img_bgr, save_name=None):
     """
     import cv2
     import matplotlib
+    matplotlib.use('TkAgg')
     import matplotlib.pyplot as plt
 
     img_rgb = cv2.cvtColor(img_bgr, cv2.COLOR_BGR2RGB)
@@ -788,12 +786,12 @@ def draw_box_list(img_bgr, box_list, is_arrow=False, is_text=True, is_show=False
         if is_text:
             draw_text(ori_img, str(idx), point)  # 绘制序号
 
-    if is_show:
+    if is_show or save_name:
         show_img_bgr(ori_img, save_name=save_name)
     return ori_img
 
 
-def check_line_intersect(line1, line2, thr=0.4):
+def check_line_intersect(line1, line2, thr=0.66):
     """
     检测连线是不是交叉
     """
@@ -810,19 +808,29 @@ def sorted_boxes_by_col(boxes, img_bgr=None):
     """
     根据位置, 按列排序boxes
     """
-    # print('[Info] 排序boxes开始!')
-    x_min_list, y_min_list = [], []
+    if len(boxes) == 1:
+        return [boxes], [[0]], 1
+
+    x_min_list, y_min_list, s_min_list = [], [], []
 
     # 从左到右(lr)、从上到下(ud)排序
     for box in boxes:
         x_min_list.append(box[0])
         y_min_list.append(box[1])
+        s_min_list.append(pow(box[0], 2) + pow(box[1], 2))
+
+    # ----- 判断：使用从上到下，还是从左上角开始 ------ #
+    y_min_idxes = np.argsort(y_min_list)
+    box_ud_0 = boxes[y_min_idxes[0]]
+    box_ud_1 = boxes[y_min_idxes[1]]
+    if box_ud_1[1] - box_ud_0[3] > -5:
+        box_ud_idxes = np.argsort(y_min_list)
+    else:
+        box_ud_idxes = np.argsort(s_min_list)
+    # ----- 判断：使用从上到下，还是从左上角开始 ------ #
 
     box_lr_idxes = np.argsort(x_min_list)
-    box_ud_idxes = np.argsort(y_min_list)
-
     sorted_boxes, sorted_idxes = [], []  # 最终的box结果
-
     num_row = 0
 
     n_boxes = len(boxes)
@@ -838,8 +846,6 @@ def sorted_boxes_by_col(boxes, img_bgr=None):
         idx_flag[box_idx] = True
 
         target_box = boxes[box_idx]
-
-        # draw_box(img_bgr, target_box, color=(0, 255, 0), is_show=True)
 
         target_height = [target_box[1], target_box[3]]
         target_width = [target_box[0], target_box[2]]
@@ -855,7 +861,6 @@ def sorted_boxes_by_col(boxes, img_bgr=None):
             if idx_flag[tmp_box_idx]:
                 continue
             tmp_box = boxes[tmp_box_idx]
-            # draw_box(img_bgr, tmp_box, color=(0, 255, 0), is_show=True)
 
             tmp_height = [tmp_box[1], tmp_box[3]]
             tmp_width = [tmp_box[0], tmp_box[2]]
@@ -865,19 +870,13 @@ def sorted_boxes_by_col(boxes, img_bgr=None):
 
             if is_width_intersect and r_height < 0.6:
                 idx_flag[tmp_box_idx] = True
-                # draw_box(img_bgr, tmp_box, color=(0, 0, 255), is_show=True, is_new=False)
                 if r_width < 1:
                     target_height = [tmp_box[1], tmp_box[3]]
                 line_boxes.append(tmp_box)
                 line_idxes.append(tmp_box_idx)
-                # print('[Info] tmp box: {}'.format(tmp_box))
-            # print('[Info] tmp_line: {}'.format(tmp_line))
 
         line_boxes.reverse()
         line_idxes.reverse()
-
-        # print('[Info] line_boxes num: {}'.format(len(line_boxes)))
-        # draw_box_list(img_bgr, line_boxes, is_show=True)
 
         target_height = [target_box[1], target_box[3]]
         target_width = [target_box[0], target_box[2]]
@@ -887,8 +886,6 @@ def sorted_boxes_by_col(boxes, img_bgr=None):
             if idx_flag[tmp_box_idx]:
                 continue
             tmp_box = boxes[tmp_box_idx]
-            # print('[Info] r_i: {}, tmp_box: {}'.format(r_i, tmp_box))
-            # draw_box(img_bgr, tmp_box, color=(0, 255, 0), is_show=True)
             tmp_height = [tmp_box[1], tmp_box[3]]
             tmp_width = [tmp_box[0], tmp_box[2]]
 
@@ -897,32 +894,20 @@ def sorted_boxes_by_col(boxes, img_bgr=None):
 
             if is_width_intersect and (r_height < 0.6 or r_width > 0.8):
                 idx_flag[tmp_box_idx] = True
-                # draw_box(img_bgr, tmp_box, color=(0, 0, 255), is_show=True, is_new=False)
                 if r_width < 1:
                     target_height = [tmp_box[1], tmp_box[3]]
                 line_boxes.append(tmp_box)
                 line_idxes.append(tmp_box_idx)
-                # print('[Info] tmp box: {}'.format(tmp_box))
 
         y_list = [box[1] for box in line_boxes]
         line_tuple = zip(y_list, line_boxes, line_idxes)
         sorted_tuple = sorted(line_tuple)  # 排序idxes
         y_list, line_boxes, line_idxes = zip(*sorted_tuple)
 
-        # img_copy = copy.copy(img_bgr)
-        # for box in line_boxes:
-        #     draw_box(img_copy, box, color=(255, 255, 0), is_show=True, is_new=False)
-        # print('[Info] box: {}'.format(box))
-
         sorted_boxes.append(list(line_boxes))
         sorted_idxes.append(list(line_idxes))
         num_row += 1
 
-        # print('-' * 100)
-
-    # draw_box_list(img_bgr, final_boxes, is_show=True)
-    # show_img_bgr(img_bgr)
-    # print('[Info] 排序box结束, 行数: {}'.format(num_row))
     return sorted_boxes, sorted_idxes, num_row
 
 
@@ -930,8 +915,10 @@ def sorted_boxes_by_row(boxes, img_bgr=None):
     """
     根据位置, 按行排序boxes
     """
-    print('[Info] 排序boxes开始!')
-    x_min_list, y_min_list = [], []
+    if len(boxes) == 1:
+        return [boxes], [[0]], 1
+
+    x_min_list, y_min_list, s_min_list = [], [], []
     n_boxes = len(boxes)
     idx_flag = [False] * len(boxes)
 
@@ -939,8 +926,19 @@ def sorted_boxes_by_row(boxes, img_bgr=None):
     for box in boxes:
         x_min_list.append(box[0])
         y_min_list.append(box[1])
+        s_min_list.append(pow(box[0], 2) + pow(box[1], 2))
+
+    # ----- 判断：使用从上到下，还是从左上角开始 ------ #
+    y_min_idxes = np.argsort(y_min_list)
+    box_ud_0 = boxes[y_min_idxes[0]]
+    box_ud_1 = boxes[y_min_idxes[1]]
+    if box_ud_1[1] - box_ud_0[3] > -5:
+        box_ud_idxes = np.argsort(y_min_list)
+    else:
+        box_ud_idxes = np.argsort(s_min_list)
+    # ----- 判断：使用从上到下，还是从左上角开始 ------ #
+
     box_lr_idxes = np.argsort(x_min_list)
-    box_ud_idxes = np.argsort(y_min_list)
 
     sorted_boxes, sorted_idxes = [], []  # 最终的box结果
 
@@ -957,8 +955,6 @@ def sorted_boxes_by_row(boxes, img_bgr=None):
 
         target_box = boxes[box_idx]
 
-        # draw_box(img_bgr, target_box, color=(0, 255, 0), is_show=True)
-
         target_height = [target_box[1], target_box[3]]
         target_width = [target_box[0], target_box[2]]
 
@@ -973,7 +969,6 @@ def sorted_boxes_by_row(boxes, img_bgr=None):
             if idx_flag[tmp_box_idx]:
                 continue
             tmp_box = boxes[tmp_box_idx]
-            # draw_box(img_bgr, tmp_box, color=(0, 255, 0), is_show=True)
             tmp_height = [tmp_box[1], tmp_box[3]]
             tmp_width = [tmp_box[0], tmp_box[2]]
 
@@ -982,14 +977,10 @@ def sorted_boxes_by_row(boxes, img_bgr=None):
 
             if is_height_intersect and r_width < 0.6:
                 idx_flag[tmp_box_idx] = True
-                # draw_box(img_bgr, tmp_box, color=(0, 0, 255), is_show=True, is_new=False)
                 if r_height < 1:
                     target_height = [tmp_box[1], tmp_box[3]]
                 line_boxes.append(tmp_box)
                 line_idxes.append(tmp_box_idx)
-                # print('[Info] tmp box: {}'.format(tmp_box))
-
-            # print('[Info] tmp_line: {}'.format(tmp_line))
 
         line_boxes.reverse()
         line_idxes.reverse()
@@ -1002,7 +993,6 @@ def sorted_boxes_by_row(boxes, img_bgr=None):
             if idx_flag[tmp_box_idx]:
                 continue
             tmp_box = boxes[tmp_box_idx]
-            # draw_box(img_bgr, tmp_box, color=(0, 255, 0), is_show=True)
             tmp_height = [tmp_box[1], tmp_box[3]]
             tmp_width = [tmp_box[0], tmp_box[2]]
 
@@ -1011,36 +1001,19 @@ def sorted_boxes_by_row(boxes, img_bgr=None):
 
             if is_height_intersect and r_width < 0.6:
                 idx_flag[tmp_box_idx] = True
-                # draw_box(img_bgr, tmp_box, color=(0, 0, 255), is_show=True, is_new=False)
                 if r_height < 1:
                     target_height = [tmp_box[1], tmp_box[3]]
                 line_boxes.append(tmp_box)
                 line_idxes.append(tmp_box_idx)
-                # print('[Info] tmp box: {}'.format(tmp_box))
 
         x_list = [box[0] for box in line_boxes]
         line_tuple = zip(x_list, line_boxes, line_idxes)
         sorted_tuple = sorted(line_tuple)  # 排序idxes
         x_list, line_boxes, line_idxes = zip(*sorted_tuple)
 
-        # img_copy = copy.copy(img_bgr)
-        # for box in line_boxes:
-        #     draw_box(img_copy, box, color=(255, 255, 0), is_show=True, is_new=False)
-        # print('[Info] box: {}'.format(box))
-
         sorted_boxes.append(list(line_boxes))
         sorted_idxes.append(list(line_idxes))
         num_row += 1
-
-        # print('-' * 100)
-
-    # for idx, box in enumerate(final_boxes):
-    #     draw_box(img_bgr, box, color=(255, 255, 0), is_new=False)
-    #     draw_text(img_bgr, str(idx), (box[0], box[1]))
-    #     print('[Info] box: {}'.format(box))
-
-    # show_img_bgr(img_bgr)
-    print('[Info] 排序box结束, 行数: {}'.format(num_row))
 
     return sorted_boxes, sorted_idxes, num_row
 
