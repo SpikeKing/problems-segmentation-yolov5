@@ -23,7 +23,7 @@ from utils.metrics import fitness
 
 # Settings
 matplotlib.rc('font', **{'size': 11})
-matplotlib.use('Agg')  # for writing to files only
+# matplotlib.use('Agg')  # for writing to files only
 
 
 def color_list():
@@ -267,7 +267,7 @@ def plot_labels(labels, save_dir=Path(''), loggers=None):
     plt.close()
 
     # matplotlib labels
-    matplotlib.use('svg')  # faster
+    # matplotlib.use('svg')  # faster
     ax = plt.subplots(2, 2, figsize=(8, 8), tight_layout=True)[1].ravel()
     ax[0].hist(c, bins=np.linspace(0, nc, nc + 1) - 0.5, rwidth=0.8)
     ax[0].set_xlabel('classes')
@@ -288,7 +288,7 @@ def plot_labels(labels, save_dir=Path(''), loggers=None):
             ax[a].spines[s].set_visible(False)
 
     plt.savefig(save_dir / 'labels.jpg', dpi=200)
-    matplotlib.use('Agg')
+    # matplotlib.use('Agg')
     plt.close()
 
     # loggers

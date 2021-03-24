@@ -413,7 +413,7 @@ def show_img_bgr(img_bgr, save_name=None):
     """
     import cv2
     import matplotlib
-    matplotlib.use('TkAgg')
+    # matplotlib.use('TkAgg')
     import matplotlib.pyplot as plt
 
     img_rgb = cv2.cvtColor(img_bgr, cv2.COLOR_BGR2RGB)
@@ -791,13 +791,27 @@ def draw_box_list(img_bgr, box_list, is_arrow=False, is_text=True, is_show=False
     return ori_img
 
 
-def check_line_intersect(line1, line2, thr=0.66):
+def safe_div(x, y):
+    """
+    安全除法
+    :param x: 分子
+    :param y: 分母
+    :return: 除法
+    """
+    x = float(x)
+    y = float(y)
+    if y == 0.0:
+        return 0.0
+    return x / y
+
+
+def check_line_intersect(line1, line2, thr=0.33):
     """
     检测连线是不是交叉
     """
     line1_x, line2_x = sorted((line1, line2))
     diff = line1_x[1] - line2_x[0]
-    r = float(diff) / min(float(line1_x[1] - line1_x[0]), float(line2_x[1] - line2_x[0]))
+    r = safe_div(diff, min(line1_x[1] - line1_x[0], line2_x[1] - line2_x[0]))
     if r > thr:
         return True, r
     else:
@@ -815,20 +829,10 @@ def sorted_boxes_by_col(boxes, img_bgr=None):
 
     # 从左到右(lr)、从上到下(ud)排序
     for box in boxes:
-        x_min_list.append(box[0])
-        y_min_list.append(box[1])
-        s_min_list.append(pow(box[0], 2) + pow(box[1], 2))
+        x_min_list.append((box[0] + box[2]) // 2)
+        y_min_list.append((box[1] + box[3]) // 2)
 
-    # ----- 判断：使用从上到下，还是从左上角开始 ------ #
-    y_min_idxes = np.argsort(y_min_list)
-    box_ud_0 = boxes[y_min_idxes[0]]
-    box_ud_1 = boxes[y_min_idxes[1]]
-    if box_ud_1[1] - box_ud_0[3] > -5:
-        box_ud_idxes = np.argsort(y_min_list)
-    else:
-        box_ud_idxes = np.argsort(s_min_list)
-    # ----- 判断：使用从上到下，还是从左上角开始 ------ #
-
+    box_ud_idxes = np.argsort(y_min_list)
     box_lr_idxes = np.argsort(x_min_list)
     sorted_boxes, sorted_idxes = [], []  # 最终的box结果
     num_row = 0
@@ -924,20 +928,10 @@ def sorted_boxes_by_row(boxes, img_bgr=None):
 
     # 从左到右(lr)、从上到下(ud)排序
     for box in boxes:
-        x_min_list.append(box[0])
-        y_min_list.append(box[1])
-        s_min_list.append(pow(box[0], 2) + pow(box[1], 2))
+        x_min_list.append((box[0] + box[2]) // 2)
+        y_min_list.append((box[1] + box[3]) // 2)
 
-    # ----- 判断：使用从上到下，还是从左上角开始 ------ #
-    y_min_idxes = np.argsort(y_min_list)
-    box_ud_0 = boxes[y_min_idxes[0]]
-    box_ud_1 = boxes[y_min_idxes[1]]
-    if box_ud_1[1] - box_ud_0[3] > -5:
-        box_ud_idxes = np.argsort(y_min_list)
-    else:
-        box_ud_idxes = np.argsort(s_min_list)
-    # ----- 判断：使用从上到下，还是从左上角开始 ------ #
-
+    box_ud_idxes = np.argsort(y_min_list)
     box_lr_idxes = np.argsort(x_min_list)
 
     sorted_boxes, sorted_idxes = [], []  # 最终的box结果

@@ -12,7 +12,6 @@ import base64
 import numpy as np
 import torch
 import matplotlib
-matplotlib.use('TkAgg')
 from multiprocessing.pool import Pool
 
 from models.experimental import attempt_load
@@ -110,7 +109,7 @@ class ImgDetector(object):
         return box_list, conf_list
 
     @staticmethod
-    def filer_boxes_by_size(boxes, r_thr=0.5):
+    def filer_boxes_by_size(boxes, r_thr=0.4):
         """
         根据是否重叠过滤包含在内部的框
         """
@@ -236,8 +235,7 @@ class ImgDetector(object):
         return new_words_info, box_list, word_list, idx_list, data_dict
 
     @staticmethod
-    def analyze_layout(l2r_boxes, head_banner_boxes, tail_banner_boxes,
-                       h, w, is_ud=True, img_bgr=None):
+    def analyze_layout(l2r_boxes, head_boxes, tail_boxes, h, w, is_ud=True, img_bgr=None):
         """
         分析版面，从左到右的box列
         """
@@ -248,14 +246,14 @@ class ImgDetector(object):
         start_h, end_h = 0, h
 
         head_col_box = []
-        if head_banner_boxes:
-            head_banner = merge_boxes(head_banner_boxes)
+        if head_boxes:
+            head_banner = merge_boxes(head_boxes)
             head_col_box = [head_banner[0], 0, head_banner[2], head_banner[3]]
             start_h = head_banner[3]
 
         tail_col_box = []
-        if tail_banner_boxes:
-            tail_banner = merge_boxes(tail_banner_boxes)
+        if tail_boxes:
+            tail_banner = merge_boxes(tail_boxes)
             tail_col_box = [tail_banner[0], tail_banner[1], tail_banner[2], h]
             end_h = tail_banner[1]
 
@@ -287,10 +285,10 @@ class ImgDetector(object):
         for sub_col_box in sub_col_box_list:
             col_box_list += sub_col_box
 
-        if head_banner_boxes:
+        if head_boxes:
             col_box_list = [head_col_box] + col_box_list
 
-        if tail_banner_boxes:
+        if tail_boxes:
             col_box_list = col_box_list + [tail_col_box]
 
         return col_box_list
@@ -423,42 +421,52 @@ class ImgDetector(object):
         return l_box_list, sentence_problem
 
     @staticmethod
-    def add_tag_to_wordinfo_v2(col_boxes, problem_boxes, boxes_confs, words_info, img_bgr=None):
-        # 初始化
+    def sorted_boxes_with_confs(problem_boxes, problem_confs):
+        sorted_boxes, sorted_idxes, num_row = sorted_boxes_by_row(problem_boxes)
+        sorted_confs = filter_list_by_idxes(problem_confs, sorted_idxes)
+        new_boxes, new_confs = [], []
+        for line_boxes, line_confs in zip(sorted_boxes, sorted_confs):
+            new_boxes += line_boxes
+            new_confs += line_confs
+        return new_boxes, new_confs
+
+    @staticmethod
+    def add_tag_to_wordinfo_v2(col_boxes, cv_boxes, cv_confs, nlp_boxes, nlp_confs, words_info, img_bgr=None):
+        # 初始化-1
         for words_data in words_info:
             words_data['columnIdx'] = -1
             words_data['blockIdx'] = -1
             words_data['lineIdx'] = -1
 
-        # ---------- 先切分题目框 ----------#
+        problem_boxes = cv_boxes + nlp_boxes
+        problem_confs = cv_confs + nlp_confs
+
+        problem_boxes, problem_confs = ImgDetector.sorted_boxes_with_confs(problem_boxes, problem_confs)
+
         prb_idx_dict = collections.defaultdict(list)
         rank_prb_tag_list = []
         word_boxes = []
+        # 文本块合并题目框
         for idx, words_data in enumerate(words_info):
-            # pos = words_data["pos"]
-            # word_rec = ImgDetector.parse_pos(pos)
-            # word_box = rec2box(word_rec)
-            # word_boxes.append(word_box)
             word_box = words_data['rotated_box']
             word_boxes.append(word_box)
-            current_idx = -1
-            is_used = False
+
+            # 判断文字块是否与题目合并
+            prb_iou_dict = {}
             for prb_idx, prb_box in enumerate(problem_boxes):
                 prb_iou = min_iou(prb_box, word_box)
-                if prb_iou >= 0.35 and not is_used:
-                    current_idx = prb_idx
-                    p_tag = "p_{}".format(current_idx)
-                    prb_idx_dict[p_tag].append(idx)
-                    is_used = True
-
-            if current_idx == -1:
-                rank_prb_tag_list.append("{}".format(idx))
-            else:
+                if prb_iou >= 0.35:
+                    prb_iou_dict[prb_idx] = prb_iou  # IoU值
+            # 文字块是否属于某个题目
+            if prb_iou_dict:
+                prb_iou_list = sort_dict_by_value(prb_iou_dict)  # IoU排序
+                current_idx, _ = prb_iou_list[0]
                 p_tag = "p_{}".format(current_idx)
+                prb_idx_dict[p_tag].append(idx)
                 if p_tag not in rank_prb_tag_list:
                     rank_prb_tag_list.append(p_tag)
-        # 测试
-        # draw_box_list(img_bgr, word_boxes, is_show=True, save_name="tmp-{}.jpg".format(get_current_time_str()))
+            else:
+                rank_prb_tag_list.append("{}".format(idx))
 
         # 切分栏
         col_prb_box_dict = collections.defaultdict(list)
@@ -471,7 +479,7 @@ class ImgDetector(object):
                 if item.startswith("p"):
                     p_id = int(item.split('_')[-1])
                     prb_box = problem_boxes[p_id]
-                    prb_conf = boxes_confs[p_id]
+                    prb_conf = problem_confs[p_id]
                     col_iou = min_iou(col_box, prb_box)
                     if col_iou >= 0.5:
                         current_idx = col_tag
@@ -549,7 +557,6 @@ class ImgDetector(object):
                     tmp_col_idx_list.append([prb_idxes])
                     continue
                 boxes_list = [word_boxes[i] for i in prb_idxes]
-                # draw_box_list(img_bgr, boxes_list, save_name="tmp-{}.jpg".format(get_current_time_str()))
                 sorted_boxes, sorted_idxes, num_row = sorted_boxes_by_row(boxes_list, img_bgr)
                 rank_prb_idxes = filter_list_by_idxes(prb_idxes, sorted_idxes)
                 tmp_col_idx_list.append(rank_prb_idxes)
@@ -557,7 +564,6 @@ class ImgDetector(object):
 
         # 添加标签
         ranked_words_info, other_words_info = [], []  # 优质加杂质
-        # diff_col_num = 0
         col_blocks_list = []
         ranked_content, other_content = "", ""
 
@@ -592,8 +598,13 @@ class ImgDetector(object):
                 else:
                     word_idx = int(prb_tag)
                     word_data = words_info[word_idx]
-                    other_content += word_data["word"] + " "
-                    other_words_info.append(word_data)
+                    # 属于栏中的排序，按照自然顺序
+                    if col_tag.startswith("c"):
+                        ranked_words_info.append(word_data)
+                        ranked_content += word_data["word"] + " "
+                    else:
+                        other_words_info.append(word_data)
+                        other_content += word_data["word"] + " "
                     continue
 
                 for line_idx, line_idx_list in enumerate(nested_line_idx_list):
@@ -630,7 +641,7 @@ class ImgDetector(object):
         box_lr_idxes = np.argsort(x_min_list)
         box_ud_idxes = np.argsort(y_min_list)
 
-        banner_thr = 0.7  # 通栏的宽度 大于 总宽度 的 70%
+        banner_thr = 0.80  # 通栏的宽度 大于 总宽度 的 80%
         none_banner_thr = 0.4
 
         head_banner_boxes, tail_banner_boxes = [], []
@@ -708,7 +719,8 @@ class ImgDetector(object):
             draw_text(img_bgr_x, str(idx), org=get_box_center(word_box), color=(0, 0, 255))
         return img_bgr_x
 
-    def draw_all_boxes(self, img_bgr, rank_word_info, words_info, large_col_boxes, problem_boxes, blocks_info):
+    @staticmethod
+    def draw_all_boxes(img_bgr, rank_word_info, large_col_boxes, cv_boxes, nlp_boxes, blocks_info):
         """
         绘制Boxes
         """
@@ -724,9 +736,6 @@ class ImgDetector(object):
             col_idx = word_info['columnIdx']
             block_idx = word_info['blockIdx']
             line_idx = word_info['lineIdx']
-            # pos = word_info["pos"]
-            # word_rec = ImgDetector.parse_pos(pos)
-            # box = rec2box(word_rec)
             box = word_info['rotated_box']
             if col_idx == -1 or block_idx == -1 or line_idx == -1:
                 continue
@@ -787,7 +796,7 @@ class ImgDetector(object):
 
         # 绘制图像2
         color_cols_list = generate_colors(len(large_col_boxes), seed=72)
-        color_prbs_list = generate_colors(len(problem_boxes))
+        color_prbs_list = generate_colors(len(cv_boxes))
 
         img_bgr2 = copy.copy(img_bgr)
         for idx, xyxy in enumerate(large_col_boxes):
@@ -796,7 +805,7 @@ class ImgDetector(object):
             img_bgr2 = cv2.rectangle(img_bgr2, c1, c2, color_cols_list[idx], thickness=5, lineType=cv2.LINE_AA)
             # cv2.addWeighted(img_bgr2, 0.3, img_copy, 0.7, 0, img_bgr2)  # 添加色块
 
-        for idx, xyxy in enumerate(problem_boxes):
+        for idx, xyxy in enumerate(cv_boxes):
             img_copy = copy.copy(img_bgr2)
             c1, c2 = (int(xyxy[0]), int(xyxy[1])), (int(xyxy[2]), int(xyxy[3]))
             img_bgr2 = cv2.rectangle(img_bgr2, c1, c2, color_prbs_list[idx], thickness=-1, lineType=cv2.LINE_AA)
@@ -806,13 +815,13 @@ class ImgDetector(object):
         # 绘制图像3
         if blocks_info:
             img_bgr3 = copy.copy(img_bgr)
-            img_bgr3 = self.draw_blocks_info(img_bgr3, blocks_info)
+            img_bgr3 = ImgDetector.draw_blocks_info(img_bgr3, blocks_info)
         else:
             img_bgr3 = copy.copy(img_bgr)
 
         # 绘制图像4
         img_bgr4 = copy.copy(img_bgr)
-        img_bgr4 = self.draw_word_info(img_bgr4, rank_word_info)
+        img_bgr4 = ImgDetector.draw_word_info(img_bgr4, rank_word_info)
 
         return img_bgr1, img_bgr2, img_bgr3, img_bgr4
 
@@ -940,22 +949,37 @@ class ImgDetector(object):
         """
         sum_angle = 0
         n_words = len(words_info)
+        if n_words == 0:
+            boxes = []
+            for word_info in words_info:
+                pos = word_info['pos']
+                word_rec = ImgDetector.parse_pos(pos)
+                word_box = rec2box(word_rec)
+                boxes.append(word_box)
+            return img_bgr, boxes
+
+        n_txt = 0
         for word_info in words_info:
-            sum_angle += word_info['angle']
+            word_txt = word_info['word']
+            n_word_txt = len(word_txt)
 
-        avg_angle = sum_angle // n_words
+            if abs(word_info['angle']) > 35:  # 去掉异常的角度
+                continue
 
+            n_txt += n_word_txt
+            x_angle = word_info['angle'] * n_word_txt
+            sum_angle += x_angle
+
+        avg_angle = sum_angle // n_txt
         img_rotated, M = ImgDetector.rotate_bound(img_bgr, avg_angle)
-        # show_img_bgr(img_rotated)  # 测试
-
         rotated_boxes = ImgDetector.warp_data(words_info, M)
-        # draw_box_list(img_rotated, rotated_boxes, is_show=True)  # 测试
 
         return img_rotated, rotated_boxes
 
     @staticmethod
     def sorted_words_info(img_bgr, rotated_boxes, words_info):
         sorted_boxes, sorted_idxes, num_row = sorted_boxes_by_row(rotated_boxes, img_bgr=img_bgr)
+
         res_rotated_boxes = []
         res_words_info = []
         for sub_idx_list in sorted_idxes:
@@ -974,51 +998,85 @@ class ImgDetector(object):
         return img_rotated, words_info_rotated
 
     @staticmethod
-    def module_split_banners(problem_boxes, boxes_confs, img_w):
+    def check_long_text(words_info_rotated, problem_boxes):
         """
-        拆分Banner
+        增加长文本的容错机制
         """
-        problem_boxes, new_idxes = ImgDetector.filer_boxes_by_size(problem_boxes)   # 合并重叠的检测框
-        boxes_confs = filter_list_by_idxes(boxes_confs, new_idxes)  # 同步过滤置信度
+        nlp_boxes, nlp_confs = [], []
 
-        # 增加上下分栏的适配
-        head_banner_boxes, tail_banner_boxes, sub_cv_problem_boxes, head_confs, tail_confs, sub_cv_confs = \
-            ImgDetector.filter_banner_box(problem_boxes, boxes_confs, img_w)
+        for word_info in words_info_rotated:
+            word_box = word_info["rotated_box"]
 
-        # 重新排序问题框，从上到下
-        col_problem_boxes, col_sorted_idxes, num_col = sorted_boxes_by_col(sub_cv_problem_boxes)
+            is_iou = False
+            for prb_idx, prb_box in enumerate(problem_boxes):
+                prb_iou = min_iou(prb_box, word_box)
+                if prb_iou > 0.4:  # 容错IoU
+                    is_iou = True
+                    break
+            if not is_iou:
+                word_txt = word_info['word']
+                n_word_txt = len(word_txt)
+                print('[Info] len: {}, word_txt: {}'.format(n_word_txt, word_txt))
+                if n_word_txt < 20:  # 容错文本长度
+                    continue
+                nlp_boxes.append(word_box)
+                nlp_confs.append(-1)  # 容错置信度
 
-        # 合并首栏和尾栏的框
-        problem_boxes = []  # 去掉分栏信息
-        problem_boxes += head_banner_boxes
-        for pcb in col_problem_boxes:
-            problem_boxes += pcb
-        problem_boxes += tail_banner_boxes
-
-        # 合并首栏和尾栏的置信度
-        boxes_confs = []  # 去掉分栏信息
-        boxes_confs += head_confs
-        for line_idxes in col_sorted_idxes:
-            boxes_confs += [sub_cv_confs[i] for i in line_idxes]
-        boxes_confs += tail_confs
-        return problem_boxes, boxes_confs, col_problem_boxes, head_banner_boxes, tail_banner_boxes
+        return nlp_boxes, nlp_confs
 
     @staticmethod
-    def module_analyze_columns(col_problem_boxes, head_banner_boxes, tail_banner_boxes, img_h, img_w):
+    def module_split_banners(cv_boxes, cv_confs, img_w, words_info_rotated):
+        """
+        分析Boxes
+        """
+        # 增加兜底补充框, 兜底策略
+        if not cv_boxes:
+            cv_boxes, cv_confs = ImgDetector.check_empty_cv(words_info_rotated)  # 补充框
+
+        nlp_boxes, nlp_confs = ImgDetector.check_long_text(words_info_rotated, cv_boxes)
+
+        cv_boxes, new_idxes = ImgDetector.filer_boxes_by_size(cv_boxes)   # 合并重叠的检测框
+        cv_confs = filter_list_by_idxes(cv_confs, new_idxes)  # 同步过滤置信度
+
+        # 增加上下分栏的适配
+        head_boxes, tail_boxes, sub_cv_problem_boxes, head_confs, tail_confs, sub_cv_confs = \
+            ImgDetector.filter_banner_box(cv_boxes, cv_confs, img_w)
+
+        # 重新排序问题框，从上到下
+        mid_boxes, mid_idxes, num_col = sorted_boxes_by_col(sub_cv_problem_boxes)
+
+        # 合并首栏和尾栏的框
+        cv_boxes = []  # 去掉分栏信息
+        cv_boxes += head_boxes
+        for pcb in mid_boxes:
+            cv_boxes += pcb
+        cv_boxes += tail_boxes
+
+        # 合并首栏和尾栏的置信度
+        cv_confs = []  # 去掉分栏信息
+        cv_confs += head_confs
+        for line_idxes in mid_idxes:
+            cv_confs += [sub_cv_confs[i] for i in line_idxes]
+        cv_confs += tail_confs
+
+        return cv_boxes, cv_confs, nlp_boxes, nlp_confs, mid_boxes, head_boxes, tail_boxes
+
+    @staticmethod
+    def module_analyze_columns(mid_boxes, head_boxes, tail_boxes, img_h, img_w):
         """
         分栏逻辑
         """
-        large_col_boxes = ImgDetector.analyze_layout(col_problem_boxes, head_banner_boxes, tail_banner_boxes, img_h, img_w)
+        large_col_boxes = ImgDetector.analyze_layout(mid_boxes, head_boxes, tail_boxes, img_h, img_w)
         return large_col_boxes
 
     @staticmethod
-    def module_rank_wordinfo(large_col_boxes, problem_boxes, boxes_confs, words_info_rotated, img_bgr=None):
+    def module_rank_wordinfo(large_col_boxes, cv_boxes, cv_confs, nlp_boxes, nlp_confs, words_info_rotated, img_bgr=None):
         """
         重排序wordinfo
         """
         rank_words_info, column_num, block_num_list, blocks_info, ranked_content = \
             ImgDetector.add_tag_to_wordinfo_v2(
-                large_col_boxes, problem_boxes, boxes_confs, words_info_rotated, img_bgr=img_bgr)
+                large_col_boxes, cv_boxes, cv_confs, nlp_boxes, nlp_confs, words_info_rotated, img_bgr=img_bgr)
         return rank_words_info, column_num, block_num_list, blocks_info, ranked_content
 
     @staticmethod
@@ -1040,6 +1098,26 @@ class ImgDetector(object):
         return data_dict
 
     @staticmethod
+    def check_empty_cv(words_info):
+        """
+        题目框为空时，使用长文本行进行补全
+        """
+        nlp_boxes = []
+        nlp_confs = []
+        for word_info in words_info:
+            word_txt = word_info['word']
+            n_word_txt = len(word_txt)
+            print('[Info] len: {}, word_txt: {}'.format(n_word_txt, word_txt))
+            if n_word_txt < 10:
+                continue
+            pos = word_info["pos"]
+            word_rec = ImgDetector.parse_pos(pos)
+            word_box = rec2box(word_rec)
+            nlp_boxes.append(word_box)
+            nlp_confs.append(-1)
+        return nlp_boxes, nlp_confs
+
+    @staticmethod
     def check_words_info(img_bgr, words_info, is_rank=False):
         """
         检查排序
@@ -1055,7 +1133,7 @@ class ImgDetector(object):
                 word_box = word_info['rotated_box']
                 word_boxes.append(word_box)
 
-        draw_box_list(img_bgr, word_boxes, is_show=True, save_name="tmp-{}.jpg".format(get_current_time_str()))
+        # draw_box_list(img_bgr, word_boxes, is_show=True, save_name="tmp-{}.jpg".format(get_current_time_str()))
         print('[Info] 验证')
 
     def process(self, img_url, is_sentence=True):
@@ -1069,6 +1147,9 @@ class ImgDetector(object):
         # 第0步，获取OCR的文本框
         words_info, word_rec_list, word_str_list, idx_list, data_dict \
             = self.get_ocr_service_info(img_url)
+        angle = int(data_dict["angle"])
+        img_bgr = rotate_img_for_4angle(img_bgr, angle)
+        img_h, img_w, _ = img_bgr.shape
         word_boxes = []
         for rec in word_rec_list:
             word_boxes.append(rec2box(rec))
@@ -1083,37 +1164,49 @@ class ImgDetector(object):
         # -----------  第0步 旋转重排序wordInfo  ---------------- #
 
         # -----------  第1步 检测题目框  ---------------- #
-        cv_problem_boxes, cv_confs = self.detect_problems(img_rotated)
-        if not cv_problem_boxes:
-            print('[Info] 题目框为空')
-            return img_bgr, img_bgr, img_bgr
+        cv_boxes, cv_confs = self.detect_problems(img_rotated)
+        if not cv_boxes:
+            is_cv_empty = True
+            print('[Info] 检测题目框为空')
+        else:
+            is_cv_empty = False
         # -----------  第1步 检测题目框  ---------------- #
 
+        # -----------  第1.1步 题目框空补全  ---------------- #
+        # if is_cv_empty:
+        #     cv_problem_boxes, cv_confs = ImgDetector.module_add_empty_cv(words_info)
+        # if not cv_problem_boxes:
+        #     print('[Info] 题目框为空！无框返回')
+        #     return
+        # -----------  第1.1步 题目框空补全  ---------------- #
+
         # ----------- 第2步 增加处理上下分栏逻辑 ---------------- #
-        problem_boxes, boxes_confs, col_problem_boxes, head_banner_boxes, tail_banner_boxes = \
-            ImgDetector.module_split_banners(problem_boxes=cv_problem_boxes, boxes_confs=cv_confs, img_w=img_w)
+        cv_boxes, cv_confs, nlp_boxes, nlp_confs, mid_boxes, head_boxes, tail_boxes = \
+            ImgDetector.module_split_banners(cv_boxes=cv_boxes, cv_confs=cv_confs, img_w=img_w,
+                                             words_info_rotated=words_info_rotated)
         # ----------- 第2步 增加处理上下分栏逻辑 ---------------- #
 
         # ----------- 第3步 使用banner，中间题目框，合并成栏 ---------------- #
-        large_col_boxes = ImgDetector.module_analyze_columns(
-            col_problem_boxes, head_banner_boxes, tail_banner_boxes, img_h, img_w)
+        large_col_boxes = ImgDetector.module_analyze_columns(mid_boxes, head_boxes, tail_boxes, img_h, img_w)
         # draw_box_list(img_bgr, large_col_boxes, is_show=True)
         # ----------- 第3步 使用banner，中间题目框，合并成栏 ---------------- #
 
         # ----------- 第4步 添加信息和重排, 生成块信息  ---------------- #
         rank_words_info, column_num, block_num_list, blocks_info, ranked_content = \
-            ImgDetector.module_rank_wordinfo(large_col_boxes, problem_boxes, boxes_confs, words_info_rotated, img_rotated)
+            ImgDetector.module_rank_wordinfo(large_col_boxes, cv_boxes, cv_confs, nlp_boxes, nlp_confs,
+                                             words_info_rotated, img_rotated)
         print('[Info] 文字框数: {}, 新文字框数: {}'.format(len(words_info_rotated), len(rank_words_info)))
+        print('[Info] ranked_content: {}'.format(ranked_content))
         # ----------- 第4步 添加信息和重排, 生成块信息  ---------------- #
 
         # ----------- 第5步 合并信息 ---------------- #
+        # 测试时候不需要
         # data_dict = ImgDetector.module_add_info_2_data(
         #     data_dict, rank_words_info, ranked_content, column_num, block_num_list, blocks_info)
         # ----------- 第5步 合并信息 ---------------- #
 
         img_out1, img_out2, img_out3, img_out4 = \
-            self.draw_all_boxes(img_rotated, rank_words_info, words_info_rotated,
-                                large_col_boxes, problem_boxes, blocks_info)
+            self.draw_all_boxes(img_rotated, rank_words_info, large_col_boxes, cv_boxes, nlp_boxes, blocks_info)
 
         show_img_bgr(img_out1, save_name="test1.jpg".format(get_current_time_str()))
         show_img_bgr(img_out2, save_name="test2.jpg".format(get_current_time_str()))
@@ -1240,7 +1333,9 @@ def evaluate_case():
     # img_url = "https://img.alicdn.com/imgextra/i4/6000000006439/O1CN017PxjwH1xR6vA1Ismg_!!6000000006439-0-quark.jpg"
     # img_url = "https://img.alicdn.com/imgextra/i1/6000000004084/O1CN01eCFl7L1g2WBzoGfgT_!!6000000004084-0-quark.jpg"
     # img_url = "https://img.alicdn.com/imgextra/i4/6000000003145/O1CN01kkiAyB1Z6SH4xDC6j_!!6000000003145-0-quark.jpg"
-    img_url = "https://sm-transfer.oss-cn-hangzhou.aliyuncs.com/zhengsheng.wcl/tmp/test_400_out/O1CN01g2qgo51NkVVboaXj1_!!6000000001608-0-quark.jpg"
+    # img_url = "https://img.alicdn.com/imgextra/i3/6000000007509/O1CN0117gU2B25LAiN4NAjY_!!6000000007509-0-quark.jpg"
+    # img_url = "https://sm-transfer.oss-cn-hangzhou.aliyuncs.com/zhengsheng.wcl/tmp/test/O1CN014y6sgI23TksI4fTdF_!!6000000007257-0-quark.jpg"
+    img_url = "https://img.alicdn.com/imgextra/i3/6000000004723/O1CN01e0WMYA1klBHUHaPAd_!!6000000004723-0-quark.jpg"
 
     ido = ImgDetector()
     # ido.detect_with_draw(img_bgr)
