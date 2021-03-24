@@ -23,8 +23,8 @@ class DatasetGeneratorV3(object):
     数据集生成
     """
     def __init__(self):
-        self.file_path = os.path.join(DATA_DIR, 'page_dataset_raw', '7_train_ori_gaoyan.txt')
-        # self.file_path = os.path.join(DATA_DIR, 'page_dataset_raw', '8_train_bkg_gaoyan.txt')
+        # self.file_path = os.path.join(DATA_DIR, 'page_dataset_raw', '7_train_ori_gaoyan.txt')
+        self.file_path = os.path.join(DATA_DIR, 'page_dataset_raw', '8_train_bkg_gaoyan.txt')
 
         self.out_dir = os.path.join(ROOT_DIR, '..', 'datasets', 'segmentation_ds_zhengye')
         mkdir_if_not_exist(self.out_dir)
@@ -106,9 +106,9 @@ class DatasetGeneratorV3(object):
         lbl_path = os.path.join(lbl_dir, 'v4_x_{}.txt'.format(file_idx))
 
         # format逻辑
-        img_format = "http://sm-transfer.oss-cn-hangzhou.aliyuncs.com/yjb219735/ori_imgs/{}"
-        img_url = img_format.format(img_url)
-        print('[Info] img_url: {}'.format(img_url))
+        # img_format = "http://sm-transfer.oss-cn-hangzhou.aliyuncs.com/yjb219735/ori_imgs/{}"
+        # img_url = img_format.format(img_url)
+        # print('[Info] img_url: {}'.format(img_url))
 
         is_ok, img_bgr = download_url_img(img_url)
 
