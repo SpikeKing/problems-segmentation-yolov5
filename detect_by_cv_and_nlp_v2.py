@@ -765,11 +765,8 @@ class ImgDetector(object):
         color_rows_list = generate_colors(len(res_row_boxes), seed=25)
 
         for idx, xyxy in enumerate(res_col_boxes):
-            img_copy = copy.copy(img_bgr1)
             c1, c2 = (int(xyxy[0]), int(xyxy[1])), (int(xyxy[2]), int(xyxy[3]))
             img_bgr1 = cv2.rectangle(img_bgr1, c1, c2, color_cols_list[idx], thickness=5, lineType=cv2.LINE_AA)
-            # cv2.addWeighted(img_bgr1, 0.3, img_copy, 0.7, 0, img_bgr1)  # 添加色块
-            # show_img_bgr(img_bgr1)
 
         for idx, xyxy in enumerate(res_prb_boxes):
             img_copy = copy.copy(img_bgr1)
@@ -778,19 +775,12 @@ class ImgDetector(object):
             cv2.addWeighted(img_bgr1, 0.3, img_copy, 0.7, 0, img_bgr1)  # 添加色块
 
         for idx, xyxy in enumerate(res_row_boxes):
-            img_copy = copy.copy(img_bgr1)
             c1, c2 = (int(xyxy[0]), int(xyxy[1])), (int(xyxy[2]), int(xyxy[3]))
-            img_bgr1 = cv2.rectangle(img_bgr1, c1, c2, color_rows_list[idx], thickness=-1, lineType=cv2.LINE_AA)
-            cv2.addWeighted(img_bgr1, 0.3, img_copy, 0.7, 0, img_bgr1)  # 添加色块
+            img_bgr1 = cv2.rectangle(img_bgr1, c1, c2, color_rows_list[idx], thickness=1, lineType=cv2.LINE_AA)
 
         for idx, words_data in enumerate(rank_word_info):
-            # pos = words_data["pos"]
-            # word_rec = ImgDetector.parse_pos(pos)
-            # word_box = rec2box(word_rec)
-            # word_box = rank_rotated_boxes[idx]
             word_box = words_data['rotated_box']
             draw_box(img_bgr1, word_box, color=(128, 0, 128), tk=1, is_show=False, is_new=False)
-            # draw_text(img_bgr1, str(idx), org=get_box_center(word_box), color=(0, 0, 255))
             word_tag_str = "{} {}_{}_{}".format(idx, words_data['columnIdx'], words_data['blockIdx'], words_data['lineIdx'])
             draw_text(img_bgr1, word_tag_str, org=get_box_center(word_box), color=(0, 0, 255))
 
@@ -1334,8 +1324,8 @@ def evaluate_case():
     # img_url = "https://img.alicdn.com/imgextra/i1/6000000004084/O1CN01eCFl7L1g2WBzoGfgT_!!6000000004084-0-quark.jpg"
     # img_url = "https://img.alicdn.com/imgextra/i4/6000000003145/O1CN01kkiAyB1Z6SH4xDC6j_!!6000000003145-0-quark.jpg"
     # img_url = "https://img.alicdn.com/imgextra/i3/6000000007509/O1CN0117gU2B25LAiN4NAjY_!!6000000007509-0-quark.jpg"
-    # img_url = "https://sm-transfer.oss-cn-hangzhou.aliyuncs.com/zhengsheng.wcl/tmp/test/O1CN014y6sgI23TksI4fTdF_!!6000000007257-0-quark.jpg"
-    img_url = "https://img.alicdn.com/imgextra/i3/6000000004723/O1CN01e0WMYA1klBHUHaPAd_!!6000000004723-0-quark.jpg"
+    img_url = "https://img.alicdn.com/imgextra/i4/6000000006439/O1CN017PxjwH1xR6vA1Ismg_!!6000000006439-0-quark.jpg"
+    # img_url = "https://img.alicdn.com/imgextra/i3/6000000004723/O1CN01e0WMYA1klBHUHaPAd_!!6000000004723-0-quark.jpg"
 
     ido = ImgDetector()
     # ido.detect_with_draw(img_bgr)

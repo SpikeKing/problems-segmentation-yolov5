@@ -29,7 +29,9 @@ class ImgDetector(object):
     def __init__(self):
         # self.weights = "mydata/models/best-20201224.pt"
         # self.weights = "mydata/models/best-20210118.pt"
-        self.weights = "mydata/models/best-m-20210121.pt"
+        # self.weights = "mydata/models/best-m-20210121.pt"
+        # self.weights = "mydata/models/best_yjb.pt"
+        self.weights = "mydata/models/best_v2_yjb_20210331.pt"
 
         self.img_size = 640
         self.conf_thres = 0.15
@@ -39,8 +41,8 @@ class ImgDetector(object):
         self.is_half = self.device.type != 'cpu'  # half precision only supported on CUDA
         self.model, self.img_size = self.load_model()  # 加载模型
 
-        self.onnx_path = os.path.join(DATA_DIR, 'models', 'best-m-20210121.onnx')
-        self.onnx_sess = self.load_onnx_model()
+        # self.onnx_path = os.path.join(DATA_DIR, 'models', 'best-m-20210121.onnx')
+        # self.onnx_sess = self.load_onnx_model()
 
     def load_model(self):
         """
@@ -86,7 +88,10 @@ class ImgDetector(object):
 
         img = self.preprocess_data(img_bgr)  # 预处理数据
 
+        print('[Info] model: {}'.format(self.model))
+
         pred = self.model(img, augment=False)[0]  # 预测图像
+        # feature_map = self.model(img, augment=False)[2]
 
         pred = non_max_suppression(pred, self.conf_thres, self.iou_thres)  # NMS后处理
 
@@ -208,12 +213,12 @@ def normal_vs_onnx():
 
     img_bgr = cv2.imread(os.path.join(DATA_DIR, 'test', 'test1.jpg'))
 
-    onnx_box_list = ido.detect_problems_by_onnx(img_bgr)
+    # onnx_box_list = ido.detect_problems_by_onnx(img_bgr)
 
-    img_onnx = draw_problems_boxes(img_bgr, onnx_box_list)
-    onnx_path = os.path.join(DATA_DIR, 'test', "test1.onnx.jpg")
-    cv2.imwrite(onnx_path, img_onnx)
-    print('[Info] onnx输出路径: {}'.format(onnx_path))
+    # img_onnx = draw_problems_boxes(img_bgr, onnx_box_list)
+    # onnx_path = os.path.join(DATA_DIR, 'test', "test1.onnx.jpg")
+    # cv2.imwrite(onnx_path, img_onnx)
+    # print('[Info] onnx输出路径: {}'.format(onnx_path))
 
     box_list = ido.detect_problems(img_bgr)
     img_out = draw_problems_boxes(img_bgr, box_list)
